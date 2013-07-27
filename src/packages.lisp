@@ -1,2 +1,2 @@
 (defpackage :cl-org-mode 
-  (:use :common-lisp))
+  (:use :common-lisp :alexandria :parser-combinators))
