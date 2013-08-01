@@ -29,8 +29,12 @@
 	       (node-start object stack)
 	     (when result (return (values result old-stack))))))
 
+(declaim (optimize debug safety))
+
 ;;;
 ;;; Tools
+;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
+
 (defun to-string (xs)
   (coerce xs 'string))
 
@@ -52,6 +56,10 @@
 
 (defun rejoin (x xs)
   (apply #'concatenate 'string (intersperse x xs)))
+
+(defun rejoined-lines (x)
+  (hook? (curry #'rejoin +newline-string+)
+         (sepby? x (newline))))
 
 ;;;
 ;;; Primitives
@@ -82,26 +90,6 @@
 (defun tag-constituent ()
   (choices (alphanum?) #\_ #\@ #\# #\%))
 
-(defun pre-white (x)
-  (mdo
-    (many1? (choices #\Space #\Tab))
-    x))
-
-(defun pre-opt-white (x)
-  (mdo
-    (many? (choices #\Space #\Tab))
-    x))
-
-(defun post-white (x)
-  (mdo
-    (<- ret x)
-    (result ret)))
-
-(defun post-newline (x)
-  (mdo (<- ret x)
-       (newline)
-       (result ret)))
-
 (defun spacetab? ()
   (choice #\Space #\Tab))
 
@@ -111,11 +99,41 @@
 (defun spacetabs1? ()
   (many1? (spacetab?)))
 
+(defun pre-white1? (x)
+  (mdo
+    (spacetabs1?)
+    x))
+
+(defun pre-white? (x)
+  (mdo
+    (spacetabs?)
+    x))
+
+(defun post-white? (x)
+  (mdo
+    (<- ret x)
+    (result ret)))
+
+(defun pre-newline? (x &key retain-newline)
+  (mdo (newline)
+       (<- ret x)
+       (result (if retain-newline
+                   (concatenate 'string +newline-string+ ret)
+                   ret))))
+
+(defun post-newline? (x &key retain-newline)
+  (mdo (<- ret x)
+       (newline)
+       (result (if retain-newline
+                   (concatenate 'string ret +newline-string+)
+                   ret))))
+
 (defun newline ()
-  (choices #\Linefeed
-           #\Newline
-           #\Return
-           (seq-list? #\Return #\Linefeed)))
+  (chook? +newline-string+
+          (choices #\Linefeed
+                   #\Newline
+                   #\Return
+                   (seq-list? #\Return #\Linefeed))))
 
 (defun caseless (x)
   (choices (string-downcase x) (string-upcase x)))
@@ -175,7 +193,7 @@
     "#+"
     (<- name (org-name))
     ":"
-    (<- value (pre-opt-white (line-but-of)))
+    (<- value (pre-white? (line-but-of)))
     (result (list (make-keyword (string-upcase name))
                   value))))
 
@@ -211,8 +229,9 @@
 (defun org-parser ()
   (mdo
     (<- parameters-and-pre-section (org-header))
-    (<- entries    (many? (org-entry 1 (merge-parameters (first parameters-and-pre-section)
-                                                         *org-default-parameters*))))
+    (<- entries    (sepby? (org-entry 1 (merge-parameters (first parameters-and-pre-section)
+                                                          *org-default-parameters*))
+                           (newline)))
     (result (cons :org
                   (append parameters-and-pre-section entries)))))
 
@@ -271,39 +290,132 @@
 ;;
 ;;;
 ;;; Entry
+(defun opt-and-pre-newline? (x)
+  (opt?
+   (mdo
+     (newline)
+     x)))
+
+(defun find-sepby-before? (p sep stop)
+  (choices
+   (chook? nil stop)
+   (mdo
+     (<- head p)
+     (<- tail (find-before? (mdo sep
+                                 p)
+                            stop))
+     (result (cons head tail)))))
+
+(defun find-sepby1-before? (p sep stop)
+  (choices
+   (mdo
+     (<- head p)
+     (<- tail (find-before? (mdo sep
+                                 p)
+                            stop))
+     (result (cons head tail)))))
+
 (defun org-entry (stars &optional (parameters *org-default-parameters*))
   (destructuring-bind (&key odd &allow-other-keys) parameters
     (mdo
       (<- headline    (org-headline stars))
-      (<- section     (opt? (post-newline (org-section))))
-      (<- children    (find-before? (org-entry (+ stars (if odd 2 1)) parameters)
-                                    (choice
-                                     (org-closing-headline-variants stars odd)
-                                     (end?))))
+      (<- body
+          (opt?
+           (mdo
+             (<- section  (opt-and-pre-newline?
+                           (org-section)))
+             (<- children (opt-and-pre-newline?
+                           (find-sepby-before? (org-entry (+ stars (if odd 2 1)) parameters)
+                                               (newline)
+                                               (choice
+                                                (pre-newline?
+                                                 (org-closing-headline-variants stars odd))
+                                                (end?)))))
+             
+             (result (append (when section
+                               (list section))
+                             children)))))
       (result (append (list :entry headline)
-                      (when section
-                        (list section))
-                      children)))))
+                      body)))))
 
 ;;;
 ;;; Section
+(defun org-section ()
+  (mdo
+    (<- content (sepby1? (choices
+                          (org-greater-element)
+                          (org-element))
+                         (newline)))
+    (result (list :section content))))
+
+(defun org-element ()
+  "Actually org-paragraph."
+  (mdo (<- lines (find-sepby1-before? (choices (org-element-line)
+                                               "")
+                                      (newline)
+                                      (choices
+                                       (pre-newline? "*")
+                                       (pre-newline? (org-greater-element))
+                                       (end?))))
+       (if (equal lines '(""))
+           (zero)
+           (result (rejoin +newline-string+ lines)))))
+
 (defun org-element-line ()
   (mdo
     (<- first-char (line-constituent-but #\*))
     (<- rest       (string-of (line-constituent)))
     (result (concatenate 'string (list first-char) rest))))
 
-(defun org-element ()
-  (hook? (curry #'rejoin +newline-string+)
-         (sepby? (org-element-line) (newline))))
+(defparameter *testcases*
+  '(;; 0
+    ("* a" (:ENTRY (:TITLE "a")))
+    ;; 1
+    ("* a
+"          (:ENTRY (:TITLE "a")))
+    ;; 2
+    ("* a
+   a text" (:ENTRY (:TITLE "a")
+            (:SECTION ("   a text"))))
+    ;; 3
+    ("* a
+** b
+"          (:ENTRY (:TITLE "a")
+            (:ENTRY (:TITLE "b"))))
+    ;; 4
+    ("* a
+   a text
+** b
+"          (:ENTRY (:TITLE "a")
+            (:SECTION ("   a text"))
+            (:ENTRY (:TITLE "b"))))
+    ;; 5
+    ("* a
 
-(defun org-section ()
-  (mdo
-    (<- content (sepby? (choices
-                         (org-greater-element)
-                         (org-element))
-                        (newline)))
-    (result (list :section content))))
+  a text
+
+** b
+   b text
+
+"          (:ENTRY (:TITLE "a")
+            (:SECTION ("
+  a text
+"))
+            (:ENTRY (:TITLE "b")
+                    (:SECTION
+                     ("   b text
+
+")))))))
+
+(defun test-org-entry ()
+  (values-list
+   (mapcan (lambda (tc n)
+             (destructuring-bind (input expected) tc
+               (let ((output (parse-string* (org-entry 1) input)))
+                 (unless (equal output expected)
+                   (list '_ n input output)))))
+           *testcases*
+           (iota (length *testcases*)))))
 
 ;;;
 ;;; Headline
@@ -340,12 +452,12 @@
                        &allow-other-keys) parameters
     (mdo
       (org-stars nstars)
-      (<- commentedp (opt? (pre-white (tag :commented (chook? t comment-keyword)))))
-      (<- quotedp (opt? (pre-white (tag :quoted (chook? t quote-keyword)))))
-      (<- keyword (opt? (pre-white (tag :todo (apply #'choices keywords)))))
-      (<- priority (opt? (pre-white (tag :priority (org-priority priorities)))))
-      (<- title (pre-white (tag :title (org-title))))
-      (<- tags (opt? (pre-white (tag :tags (org-tags)))))
+      (<- commentedp (opt? (pre-white1? (tag :commented (chook? t comment-keyword)))))
+      (<- quotedp (opt? (pre-white1? (tag :quoted (chook? t quote-keyword)))))
+      (<- keyword (opt? (pre-white1? (tag :todo (apply #'choices keywords)))))
+      (<- priority (opt? (pre-white1? (tag :priority (org-priority priorities)))))
+      (<- title (pre-white1? (tag :title (org-title))))
+      (<- tags (opt? (pre-white1? (tag :tags (org-tags)))))
       (spacetabs?)
       (result (append commentedp quotedp keyword priority title tags)))))
 
@@ -382,14 +494,14 @@
 (defun org-greater-block ()
   "Deviation: does not parse own contents."
   (mdo
-    (pre-white (caseless "#+BEGIN_"))
+    (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
-    (<- parameters (opt? (pre-white (line-but-of))))
+    (<- parameters (opt? (pre-white1? (line-but-of))))
     (newline)
     (<- contents (find-before? (item)
                                (seq-list?
                                 (caseless "#+END_") name (newline))))
-    (pre-white (caseless "#+END_")) name (newline)
+    (pre-white? (caseless "#+END_")) name
     (result (list :block name
                   :parameters parameters
                   :contents (to-string contents)))))
@@ -413,13 +525,13 @@
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (pre-white ":")
+    (pre-white? ":")
     (<- name (org-name))
     ":" (newline)
     (<- contents (find-before? (item)
                                (seq-list?
-                                (pre-white ":END:") (newline))))
-    (pre-white ":END:") (newline)
+                                (pre-white? (caseless ":END:")) (newline))))
+    (pre-white? (caseless ":END:"))
     (result (list :drawer name
                   :contents (to-string contents)))))
 
@@ -438,14 +550,14 @@
 ;;
 (defun org-dynamic-block ()
   (mdo
-    (pre-white (caseless "#+BEGIN:"))
-    (<- name (pre-white (line-but-of #\Space)))
-    (<- parameters (opt? (pre-white (line-but-of))))
+    (pre-white? (caseless "#+BEGIN:"))
+    (<- name (pre-white? (line-but-of #\Space)))
+    (<- parameters (opt? (pre-white? (line-but-of))))
     (newline)
     (<- contents (find-before? (item)
                                (seq-list?
-                                (pre-white "#+END:") (newline))))
-    (pre-white "#+END:") (newline)
+                                (pre-white? (caseless "#+END:")) (newline))))
+    (pre-white? (caseless "#+END:"))
     (result (list :dynamic-block name
                   :parameters parameters
                   :contents (to-string contents)))))
@@ -478,9 +590,9 @@
 (defun org-affiliated-keyword ()
   "Deviation: allows optionals for keys other than CAPTION and RESULTS."
   (flet ((keyword-key-name ()
-           (choices "CAPTION" "HEADER" "NAME" "PLOT" "RESULTS")))
+           (choices (caseless "CAPTION") (caseless "HEADER") (caseless "NAME") (caseless "PLOT") (caseless "RESULTS"))))
     (mdo
-      (pre-white "#+")
+      (pre-white? "#+")
       (choices
        (mdo (<- key      (keyword-key-name))
             (<- optional (opt? (mdo
@@ -494,7 +606,7 @@
                             (when optional
                               (list :optional optional))
                             (list :value value))))
-       (mdo "ATTR_"
+       (mdo (caseless "ATTR_")
             (<- backend (org-name))
             ": "
             (<- value   (line-but-of))
