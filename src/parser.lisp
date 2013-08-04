@@ -33,7 +33,6 @@
 
 ;;;
 ;;; Tools
-;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
 
 (defun to-string (xs)
   (coerce xs 'string))
@@ -234,6 +233,75 @@
                            (newline)))
     (result (cons :org
                   (append parameters-and-pre-section entries)))))
+
+;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
+#-nil
+(progn
+  (defun make-string-position-cache (string)
+    (let ((cache (intree:make-tree :length (length string))))
+      (iter (with line = 0)
+            (for posn from 0)
+            (for char in-string string)
+            (for pchar previous char initially #\Newline)
+            (when (char= pchar #\Newline)
+              (intree:insert posn line cache)
+              (incf line)))
+      cache))
+  (defun string-position-context (position-cache offset)
+    (multiple-value-bind (lineno lposn) (intree:tree-left offset position-cache)
+      (values lineno lposn)))
+  (defun string-position-context-full (string cache posn)
+    (multiple-value-bind (lineno lposn) (string-position-context cache posn)
+      (let ((lend (or (position #\Newline string :start lposn)
+                      (length string))))
+        (values lineno lposn lend (subseq string lposn lend) (- posn lposn)))))
+  (defun show-string-position (place string posn &optional (cache (make-string-position-cache string)))
+    (multiple-value-bind (lineno lposn rposn line col) (string-position-context-full string cache posn)
+      (declare (ignore lposn rposn))
+      (let ((fmt (format nil "; at ~~A, line ~~D, col ~~D:~~%; ~~A~~%; ~~~D@T^~~%" col)))
+        (format t fmt place (1+ lineno) (1+ col) line))))
+  (defun try-org-file (filename &aux
+                                  (string (alexandria:read-file-into-string filename))
+                                  (cache  (make-string-position-cache string)))
+    (flet ((string-context (posn)
+             (string-position-context-full string cache posn))
+           (top-hits (hash n &aux
+                           (alist (hash-table-alist hash))
+                           (sorted (sort alist #'> :key #'cdr))
+                           (top (subseq sorted 0 (min n (hash-table-count hash)))))
+             (mapcar (lambda (x)
+                       (destructuring-bind (posn . hits) x
+                         (list* posn hits (multiple-value-list (string-position-context cache posn)))))
+                     top))
+           (print-hit (posn hits)
+             (show-string-position (format nil "~D hits" hits)
+                                   string posn cache)))
+      (declare (ignorable #'print-hit))
+      (format t ";;; trying: ~S~%" filename)
+      (multiple-value-bind (result vector-context successp front seen-positions) (org-parse string)
+        (declare (ignore result))
+        (unless (and successp (null front))
+          (let ((failure-posn (slot-value vector-context 'position)))
+            (multiple-value-bind (lineno lposn rposn line col) (string-context failure-posn)
+              (declare (ignore lposn rposn))
+              (format t "; ~S at line ~D, col ~D:~%~A~%"
+                      (if successp "partial match" "failure") lineno col line))))
+        (let ((top-hits (top-hits seen-positions 15)))
+          (iter (for line in (split-sequence:split-sequence #\Newline string))
+                (for lineno from 0)
+                (format t ";   ~A~%" line)
+                (dolist (line-top (remove lineno top-hits :test #'/= :key #'third))
+                  (destructuring-bind (posn hits lineno lineposn) line-top
+                    (declare (ignore lineno))
+                    (let* ((col (- posn lineposn))
+                           (fmt (format nil ";;; ~~~D@T^  ~~D hits~~%" col)))
+                      (format t fmt hits))))))
+        #+nil
+        (iter (for (posn lineno hits) in )
+              (print-hit posn hits)))))
+  (defun test ()
+    (dolist (f *org-files*)
+      (try-org-file f))))
 
 (defun org-parse-string (string)
   (parse-string* (org-parser) string))
