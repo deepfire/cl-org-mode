@@ -450,7 +450,7 @@
 (defun org-element-line ()
   (mdo
     (<- first-char (line-constituent-but #\*))
-    (<- rest       (string-of (line-constituent)))
+    (<- rest       (find-before? (line-constituent) (newline)))
     (result (concatenate 'string (list first-char) rest))))
 
 (defparameter *testcases*
