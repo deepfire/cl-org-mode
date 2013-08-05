@@ -507,9 +507,10 @@
 ;;;
 ;;; Headline
 (defun org-title ()
-  (hook? (curry #'rejoin " ")
-         (sepby? (line-but-of-1+ #\: #\Space #\Tab)
-                 (spacetabs1?))))
+  (hook? #'to-string
+         (find-before* (line-constituent)
+                       (seq-list? (opt? (pre-white? (org-tags)))
+                                  (newline)))))
 
 (defun org-priority (priorities)
   (mdo "[#"
