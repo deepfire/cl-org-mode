@@ -436,16 +436,17 @@
 
 (defun org-element ()
   "Actually org-paragraph."
-  (mdo (<- lines (find-sepby1-before? (choices (org-element-line)
-                                               "")
-                                      (newline)
-                                      (choices
-                                       (pre-newline? "*")
-                                       (pre-newline? (org-greater-element))
-                                       (end?))))
-       (if (equal lines '(""))
-           (zero)
-           (result (rejoin +newline-string+ lines)))))
+  (mdo
+    (<- lines (find-sepby1-before? (org-element-line)
+                                   (newline)
+                                   (choices
+                                    (pre-newline? (choices "*"
+                                                           (pre-white? (choices (org-drawer-name)
+                                                                                "#+"))))
+                                    ;; (pre-newline? (org-greater-element))
+                                    (pre-newline? (end?))
+                                    (end?))))
+       (result (rejoin +newline-string+ lines))))
 
 (defun org-element-line ()
   (mdo
