@@ -154,8 +154,7 @@
                          (line-constituent)))
      (<- rest       (string-of (line-constituent)))
      (result (concatenate 'string (list first-char second-char) rest)))
-   (times? (line-constituent-but #\*) 1)
-   ""))
+   (line-constituent-but #\*)))
 
 (defun org-name ()
   (string-of (name-constituent)))
