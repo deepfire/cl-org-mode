@@ -278,6 +278,7 @@
                        (destructuring-bind (posn . hits) x
                          (list* posn hits (multiple-value-list (string-position-context cache posn)))))
                      top))
+           #+nil
            (show-fn (posn)
              (show-string-position "x" string posn cache))
            (print-hit (posn hits)
@@ -286,7 +287,6 @@
       (declare (ignorable #'print-hit))
       (format t ";;; trying: ~S~%" filename)
       (multiple-value-bind (result vector-context successp front seen-positions) (org-parse string)
-        (declare (ignore result))
         (if (and successp (null front))
             (let ((top-hits (top-hits seen-positions 25)))
               (iter (for line in (split-sequence:split-sequence #\Newline string))
@@ -300,7 +300,8 @@
                           (format t fmt hits posn lineno col))))
                     (finally
                      (format t ";;; total context references: ~D~%"
-                             (apply #'+ (hash-table-values seen-positions))))))
+                             (apply #'+ (hash-table-values seen-positions)))))
+              result)
             (let ((failure-posn (slot-value vector-context 'position)))
               (multiple-value-bind (lineno lposn rposn line col) (string-context failure-posn)
                 (declare (ignore lposn rposn))
