@@ -427,6 +427,14 @@
                          (newline)))
     (result (list :section content))))
 
+(defun format? (fmt &rest args)
+  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
+
+(defun failing? (p)
+  (mdo
+    p
+    (zero)))
+
 (defun org-element ()
   "Actually org-paragraph."
   (mdo (<- lines (find-sepby1-before? (choices (org-element-line)
