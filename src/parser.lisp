@@ -388,7 +388,7 @@
   (choices
    (mdo
      (<- head p)
-     (<- tail (find-before? (mdo sep
+     (<- tail (find-before* (mdo sep
                                  p)
                             stop))
      (result (cons head tail)))))
