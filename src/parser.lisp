@@ -609,12 +609,17 @@
 ;; In a property drawers, CONTENTS can only contain node property elements. Otherwise it can
 ;; contain any element but another drawer or property drawer.
 ;;
+(defun org-drawer-name ()
+  (mdo
+    ":"
+    (<- name (org-name))
+    ":"
+    (result name)))
+
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (pre-white? ":")
-    (<- name (org-name))
-    ":" (newline)
+    (<- name (pre-white? (org-drawer-name))) (newline)
     (<- contents (find-before? (item)
                                (seq-list?
                                 (pre-white? (caseless ":END:")) (newline))))
