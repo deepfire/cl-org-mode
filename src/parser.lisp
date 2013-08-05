@@ -379,7 +379,7 @@
    (chook? nil stop)
    (mdo
      (<- head p)
-     (<- tail (find-before? (mdo sep
+     (<- tail (find-before* (mdo sep
                                  p)
                             stop))
      (result (cons head tail)))))
@@ -451,7 +451,7 @@
 (defun org-element-line ()
   (mdo
     (<- first-char (line-constituent-but #\*))
-    (<- rest       (find-before? (line-constituent) (newline)))
+    (<- rest       (find-before* (line-constituent) (newline)))
     (result (concatenate 'string (list first-char) rest))))
 
 (defparameter *testcases*
@@ -585,7 +585,7 @@
     (<- name (org-name))
     (<- parameters (opt? (pre-white1? (line-but-of))))
     (newline)
-    (<- contents (find-before? (item)
+    (<- contents (find-before* (item)
                                (seq-list?
                                 (caseless "#+END_") name (newline))))
     (pre-white? (caseless "#+END_")) name
@@ -620,7 +620,7 @@
   "Deviation: does not parse own contents."
   (mdo
     (<- name (pre-white? (org-drawer-name))) (newline)
-    (<- contents (find-before? (item)
+    (<- contents (find-before* (item)
                                (seq-list?
                                 (pre-white? (caseless ":END:")) (newline))))
     (pre-white? (caseless ":END:"))
@@ -646,7 +646,7 @@
     (<- name (pre-white? (line-but-of #\Space)))
     (<- parameters (opt? (pre-white? (line-but-of))))
     (newline)
-    (<- contents (find-before? (item)
+    (<- contents (find-before* (item)
                                (seq-list?
                                 (pre-white? (caseless "#+END:")) (newline))))
     (pre-white? (caseless "#+END:"))
