@@ -130,6 +130,12 @@
 (defun caseless (x)
   (choices (string-downcase x) (string-upcase x)))
 
+(defun post-newline? (x)
+  (mdo
+    (<- ret x)
+    (newline)
+    (result ret)))
+
 (defun opt-and-pre-newline? (x)
   (opt?
    (mdo
