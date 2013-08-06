@@ -146,20 +146,19 @@
   (choices
    (chook? nil stop)
    (mdo
-     (<- head p)
+     (<- head (except? p stop))
      (<- tail (find-before* (mdo sep
-                                 p)
+                                 (except? p stop))
                             stop))
      (result (cons head tail)))))
 
 (defun find-sepby1-before? (p sep stop)
-  (choices
-   (mdo
-     (<- head p)
-     (<- tail (find-before* (mdo sep
-                                 p)
-                            stop))
-     (result (cons head tail)))))
+  (mdo
+    (<- head (except? p stop))
+    (<- tail (find-before* (mdo sep
+                                (except? p stop))
+                           (mdo sep stop)))
+    (result (cons head tail))))
 
 (defun upto-newline? (x)
   (mdo (<- xs (find-before? x (newline)))
@@ -419,8 +418,7 @@
                            (find-sepby-before? (org-entry (+ stars (if odd 2 1)) parameters)
                                                (newline)
                                                (choice
-                                                (pre-newline?
-                                                 (org-closing-headline-variants stars odd))
+                                                (org-closing-headline-variants stars odd)
                                                 (end?)))))
              
              (result (append (when section
@@ -450,15 +448,14 @@
 (defun org-element ()
   "Actually org-paragraph."
   (mdo
-    (<- lines (find-sepby1-before? (org-element-line)
-                                   (newline)
-                                   (choices
-                                    (pre-newline? (choices "*"
-                                                           (pre-white? (choices (org-drawer-name)
-                                                                                "#+"))))
-                                    ;; (pre-newline? (org-greater-element))
-                                    (pre-newline? (end?))
-                                    (end?))))
+    (<- lines (find-sepby1-before?
+               (org-element-line)
+               (newline)
+               (choices
+                ;; (org-greater-element)
+                "*"
+                (pre-white? (choices "#+" (org-drawer-name)))
+                (end?))))
        (result (rejoin +newline-string+ lines))))
 
 (defun org-element-line ()
