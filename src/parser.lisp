@@ -455,10 +455,12 @@
        (result (rejoin +newline-string+ lines))))
 
 (defun org-element-line ()
-  (mdo
-    (<- first-char (line-constituent-but #\*))
-    (<- rest       (find-before* (line-constituent) (newline)))
-    (result (concatenate 'string (list first-char) rest))))
+  (choice1
+   (mdo
+     (<- first-char (line-constituent-but #\*))
+     (<- rest       (find-before* (line-constituent) (newline)))
+     (result (concatenate 'string (list first-char) rest)))
+   (upto-newline? "")))
 
 (defparameter *testcases*
   '(;; 0
