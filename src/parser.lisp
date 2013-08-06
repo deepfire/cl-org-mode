@@ -223,36 +223,26 @@
   (mdo
     "#+"
     (<- name (org-name))
+    (if (let ((up (string-upcase name)))
+          (or (starts-with-subseq "BEGIN_" up)
+              (string= "BEGIN" up)))
+        (zero)
+        (context?))
     ":"
     (<- value (pre-white? (line-but-of)))
     (result (list (make-keyword (string-upcase name))
                   value))))
 
-(defun nonoption-header-line ()
-  (choice
-   (mdo
-     (<- first-char (line-constituent-but #\*))
-     (<- second-char (if (char= first-char #\#)
-                         (line-constituent-but #\+)
-                         (line-constituent)))
-     (<- rest       (string-of (line-constituent)))
-     (result (concatenate 'string (list first-char second-char) rest)))
-   (hook? #'string (upto-newline? (line-constituent-but #\*)))))
-
-(defun org-simple-section ()
-  (hook? (curry #'rejoin +newline-string+)
-         (sepby? (nonoption-header-line) (newline))))
-
 (defun org-header ()
   (mdo (<- mix (sepby? (choice
                         (org-option)
-                        (org-simple-section))
+                        (org-section))
                        (newline)))
        (result (append (list (list :header
-                                   (apply #'append (remove-if-not #'consp mix))))
-                       (when-let ((lines (remove-if #'consp mix)))
-                         (list (list :section
-                                     (rejoin +newline-string+ (remove-if #'consp mix)))))))))
+                                   (apply #'append (remove :section mix :key #'car))))
+                       (when-let ((sections (remove :section mix :key #'car :test (complement #'eql))))
+                         (list (cons :section
+                                     (apply #'append (mapcar #'rest sections)))))))))
 
 (defparameter *org-default-parameters*
   '(:odd              nil
