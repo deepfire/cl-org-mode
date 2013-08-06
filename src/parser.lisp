@@ -342,11 +342,11 @@
                      (format t ";;; total context references: ~D~%"
                              (apply #'+ (hash-table-values seen-positions)))))
               result)
-            (let ((failure-posn (slot-value vector-context 'position)))
+            (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
               (multiple-value-bind (lineno lposn rposn line col) (string-context failure-posn)
                 (declare (ignore lposn rposn))
                 (format t "; ~A at line ~D, col ~D:~%~A~%"
-                        (if successp "partial match" "failure") lineno col line))))
+                        (if successp "partial match" "failure") (1+ lineno) (1+ col) line))))
         #+nil
         (iter (for (posn lineno hits) in )
               (print-hit posn hits)))))
