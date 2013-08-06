@@ -120,13 +120,6 @@
                    (concatenate 'string +newline-string+ ret)
                    ret))))
 
-(defun post-newline? (x &key retain-newline)
-  (mdo (<- ret x)
-       (newline)
-       (result (if retain-newline
-                   (concatenate 'string ret +newline-string+)
-                   ret))))
-
 (defun newline ()
   (chook? +newline-string+
           (choices #\Linefeed
@@ -136,6 +129,37 @@
 
 (defun caseless (x)
   (choices (string-downcase x) (string-upcase x)))
+
+(defun opt-and-pre-newline? (x)
+  (opt?
+   (mdo
+     (newline)
+     x)))
+
+(defun find-sepby-before? (p sep stop)
+  (choices
+   (chook? nil stop)
+   (mdo
+     (<- head p)
+     (<- tail (find-before* (mdo sep
+                                 p)
+                            stop))
+     (result (cons head tail)))))
+
+(defun find-sepby1-before? (p sep stop)
+  (choices
+   (mdo
+     (<- head p)
+     (<- tail (find-before* (mdo sep
+                                 p)
+                            stop))
+     (result (cons head tail)))))
+
+(defun upto-newline? (x)
+  (mdo (<- xs (find-before? x (newline)))
+       (if (not (endp (rest xs)))
+           (zero)
+           (result (first xs)))))
 
 ;;;
 ;;; Tokens
@@ -183,6 +207,13 @@
 ;;
 ;;;
 ;;; Header
+(defmacro ? (x)
+  (with-gensyms (res)
+    `(mdo (format? "~S ?~%" ',x)
+          (<- ,res ,x)
+          (format? "~S ok - ~S~%" ',x ,res)
+          (result ,res))))
+
 (defun option-value-constituent ()
   (char-not-bag '(#\Linefeed #\Newline #\Return #\Space #\Tab)))
 
@@ -369,31 +400,6 @@
 ;;
 ;;;
 ;;; Entry
-(defun opt-and-pre-newline? (x)
-  (opt?
-   (mdo
-     (newline)
-     x)))
-
-(defun find-sepby-before? (p sep stop)
-  (choices
-   (chook? nil stop)
-   (mdo
-     (<- head p)
-     (<- tail (find-before* (mdo sep
-                                 p)
-                            stop))
-     (result (cons head tail)))))
-
-(defun find-sepby1-before? (p sep stop)
-  (choices
-   (mdo
-     (<- head p)
-     (<- tail (find-before* (mdo sep
-                                 p)
-                            stop))
-     (result (cons head tail)))))
-
 (defun org-entry (stars &optional (parameters *org-default-parameters*))
   (destructuring-bind (&key odd &allow-other-keys) parameters
     (mdo
