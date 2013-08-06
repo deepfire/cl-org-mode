@@ -169,17 +169,6 @@
 (defun string-of-1+ (p)
   (hook? #'to-string (many1? p)))
 
-(defun plain-line ()
-  (choices
-   (mdo
-     (<- first-char (line-constituent-but #\*))
-     (<- second-char (if (char= first-char #\#)
-                         (line-constituent-but #\+)
-                         (line-constituent)))
-     (<- rest       (string-of (line-constituent)))
-     (result (concatenate 'string (list first-char second-char) rest)))
-   (line-constituent-but #\*)))
-
 (defun org-name ()
   (string-of (name-constituent)))
 
@@ -226,9 +215,20 @@
     (result (list (make-keyword (string-upcase name))
                   value))))
 
+(defun nonoption-header-line ()
+  (choice
+   (mdo
+     (<- first-char (line-constituent-but #\*))
+     (<- second-char (if (char= first-char #\#)
+                         (line-constituent-but #\+)
+                         (line-constituent)))
+     (<- rest       (string-of (line-constituent)))
+     (result (concatenate 'string (list first-char second-char) rest)))
+   (hook? #'string (upto-newline? (line-constituent-but #\*)))))
+
 (defun org-simple-section ()
   (hook? (curry #'rejoin +newline-string+)
-         (sepby? (plain-line) (newline))))
+         (sepby? (nonoption-header-line) (newline))))
 
 (defun org-header ()
   (mdo (<- mix (sepby? (choice
