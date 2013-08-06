@@ -166,6 +166,21 @@
            (zero)
            (result (first xs)))))
 
+(defun format? (fmt &rest args)
+  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
+
+(defun failing? (p)
+  (mdo
+    p
+    (zero)))
+
+(defmacro ? (x)
+  (with-gensyms (res)
+    `(mdo (format? "~S ?~%" ',x)
+          (<- ,res ,x)
+          (format? "~S ok - ~S~%" ',x ,res)
+          (result ,res))))
+
 ;;;
 ;;; Tokens
 (defun string-of (p)
@@ -201,13 +216,6 @@
 ;;
 ;;;
 ;;; Header
-(defmacro ? (x)
-  (with-gensyms (res)
-    `(mdo (format? "~S ?~%" ',x)
-          (<- ,res ,x)
-          (format? "~S ok - ~S~%" ',x ,res)
-          (result ,res))))
-
 (defun option-value-constituent ()
   (char-not-bag '(#\Linefeed #\Newline #\Return #\Space #\Tab)))
 
@@ -436,14 +444,6 @@
                           (org-element))
                          (newline)))
     (result (list :section content))))
-
-(defun format? (fmt &rest args)
-  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
-
-(defun failing? (p)
-  (mdo
-    p
-    (zero)))
 
 (defun org-element ()
   "Actually org-paragraph."
