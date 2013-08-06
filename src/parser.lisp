@@ -244,6 +244,10 @@
                          (list (cons :section
                                      (apply #'append (mapcar #'rest sections)))))))))
 
+(defun header-nothing-p (x)
+  (and (null (cadr x))
+       (endp (cddr x))))
+
 (defparameter *org-default-parameters*
   '(:odd              nil
     :comment-keyword  "COMMENT"
@@ -260,12 +264,14 @@
 ;;; Whole thing
 (defun org-parser ()
   (mdo
-    (<- parameters-and-pre-section (org-header))
-    (<- entries    (sepby? (org-entry 1 (merge-parameters (first parameters-and-pre-section)
+    (<- header-and-pre-section (org-header))
+    (unless (header-nothing-p header-and-pre-section)
+      (newline))
+    (<- entries    (sepby? (org-entry 1 (merge-parameters (first header-and-pre-section)
                                                           *org-default-parameters*))
                            (newline)))
     (result (cons :org
-                  (append parameters-and-pre-section entries)))))
+                  (append header-and-pre-section entries)))))
 
 ;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
 #-nil
