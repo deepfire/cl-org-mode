@@ -33,7 +33,6 @@
 
 ;;;
 ;;; Tools
-
 (defun to-string (xs)
   (coerce xs 'string))
 
@@ -71,23 +70,14 @@
 (defun line-constituent-but (&rest except)
   (char-not-bag (list* #\Linefeed #\Newline #\Return except)))
 
-(defun line-of (&rest constituents)
-  (string-of (char-bag constituents)))
+(defun string-of (p)
+  (hook? #'to-string (many? p)))
 
 (defun line-but-of (&rest except)
   (string-of (apply #'line-constituent-but except)))
 
 (defun line-but-of-1+ (&rest except)
   (string-of-1+ (apply #'line-constituent-but except)))
-
-(defun line-constituent ()
-  (line-constituent-but))
-
-(defun name-constituent ()
-  (choices (alphanum?) #\_ #\-))
-
-(defun tag-constituent ()
-  (choices (alphanum?) #\_ #\@ #\# #\%))
 
 (defun spacetab? ()
   (choice #\Space #\Tab))
@@ -182,17 +172,6 @@
           (result ,res))))
 
 ;;;
-;;; Tokens
-(defun string-of (p)
-  (hook? #'to-string (many? p)))
-
-(defun string-of-1+ (p)
-  (hook? #'to-string (many1? p)))
-
-(defun org-name ()
-  (string-of (name-constituent)))
-
-;;;
 ;;; Org Syntax (draft)
 ;;
 ;; ..A core concept in this syntax is that only headlines and sections are context-free.
@@ -216,8 +195,11 @@
 ;;
 ;;;
 ;;; Header
-(defun option-value-constituent ()
-  (char-not-bag '(#\Linefeed #\Newline #\Return #\Space #\Tab)))
+(defun org-name ()
+  (string-of (choices (alphanum?) #\_ #\-)))
+
+(defun org-tag-name ()
+  (string-of (choices (alphanum?) #\_ #\@ #\# #\%)))
 
 (defun org-option ()
   (mdo
@@ -481,7 +463,7 @@
   (choice1
    (mdo
      (<- first-char (line-constituent-but #\*))
-     (<- rest       (find-before* (line-constituent) (newline)))
+     (<- rest       (find-before* (line-constituent-but) (newline)))
      (result (concatenate 'string (list first-char) rest)))
    (upto-newline? "")))
 
@@ -539,7 +521,7 @@
 ;;; Headline
 (defun org-title ()
   (hook? #'to-string
-         (find-before* (line-constituent)
+         (find-before* (line-constituent-but)
                        (seq-list? (opt? (pre-white? (org-tags)))
                                   (newline)))))
 
@@ -551,7 +533,7 @@
 
 (defun org-tags ()
   (mdo ":"
-       (<- tags (sepby? (string-of (tag-constituent)) #\:))
+       (<- tags (sepby? (org-tag-name) #\:))
        ":"
        (result tags)))
 
@@ -641,17 +623,11 @@
 ;; In a property drawers, CONTENTS can only contain node property elements. Otherwise it can
 ;; contain any element but another drawer or property drawer.
 ;;
-(defun org-drawer-name ()
-  (mdo
-    ":"
-    (<- name (org-name))
-    ":"
-    (result name)))
-
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (<- name (pre-white? (org-drawer-name))) (newline)
+    (<- name (pre-white? (bracket? ":" (org-name) ":")))
+    (newline)
     (<- contents (find-before* (item)
                                (seq-list?
                                 (pre-white? (caseless ":END:")) (newline))))
