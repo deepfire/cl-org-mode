@@ -215,6 +215,17 @@
     (result (list (make-keyword (string-upcase name))
                   raw))))
 
+(defun org-global-property ()
+  "7.1 Property syntax"
+  (mdo
+    (pre-white? "#+PROPERTY:")
+    (<- raw-name (pre-white? (org-name)))
+    (<- raw-value (pre-white1? (line-but-of)))
+    (let ((append? (ends-with #\+ raw-name))
+          (name (string-right-trim '(#\+) raw-name)))
+      (result (list :property (if append? :append :set)
+                    (make-keyword (string-upcase name)) raw-value)))))
+
 (defun org-header ()
   (mdo (<- mix (sepby? (choice
                         (org-option)
