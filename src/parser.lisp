@@ -174,6 +174,17 @@
           (format? "~S ok - ~S~%" ',x ,res)
           (result ,res))))
 
+(defmacro with-next-char? ((var) &body body)
+  (with-gensyms (inp unreadp)
+    `(lambda (,inp)
+       (let ((,unreadp t))
+         (lambda ()
+           (let ((,var (parser-combinators::context-peek ,inp)))
+             ,@body)
+           (when ,unreadp
+             (setf ,unreadp nil)
+             (make-instance 'parser-possibility :tree ,inp :suffix ,inp)))))))
+
 ;;;
 ;;; Org Syntax (draft)
 ;;
