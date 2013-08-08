@@ -369,10 +369,7 @@
     (<- initial (org-header))
     (unless (header-nothing-p initial)
       (newline))
-    (<- entries    (sepby? (org-entry 1 (merge-startup (access initial
-                                                               :header
-                                                               :startup)
-                                                       *org-default-startup*))
+    (<- entries    (sepby? (org-top-entry (access initial :header :startup))
                            (newline)))
     (result (cons :org
                   (append initial entries)))))
@@ -536,27 +533,31 @@
 ;;
 ;;;
 ;;; Entry
+(defun org-top-entry (startup)
+  (org-entry 1 (merge-startup startup *org-default-startup*)))
+
+(defun org-child-entry (stars startup &aux (odd (getf startup :odd)))
+  (org-entry (+ stars (if odd 2 1)) startup))
+
 (defun org-entry (stars &optional (startup *org-default-startup*))
-  (destructuring-bind (&key odd &allow-other-keys) startup
-    (mdo
-      (<- headline    (org-headline stars))
-      (<- body
-          (opt?
-           (mdo
-             (<- section  (opt-and-pre-newline?
-                           (org-section)))
-             (<- children (opt-and-pre-newline?
-                           (find-sepby-before? (org-entry (+ stars (if odd 2 1)) startup)
-                                               (newline)
-                                               (choice
-                                                (org-closing-headline-variants stars odd)
-                                                (end?)))))
-             
-             (result (append (when section
-                               (list section))
-                             children)))))
-      (result (append (list :entry headline)
-                      body)))))
+  (mdo
+    (<- headline    (org-headline stars))
+    (<- body
+        (opt?
+         (mdo
+           (<- section  (opt-and-pre-newline?
+                         (org-section)))
+           (<- children (opt-and-pre-newline?
+                         (find-sepby1-before? (org-child-entry stars startup)
+                                              (newline)
+                                              (choice
+                                               (org-closing-headline-variants stars startup)
+                                               (end?)))))
+           (result (append (when section
+                             (list section))
+                           children)))))
+    (result (append (list :entry headline)
+                    body))))
 
 ;;;
 ;;; Section
@@ -662,8 +663,8 @@
 (defun org-stars (n)
   (times? #\* n))
 
-(defun org-closing-headline-variants (current odd)
-  (let ((variants (loop :for x :downfrom current :to 1 :by (if odd 2 1)
+(defun org-closing-headline-variants (current startup)
+  (let ((variants (loop :for x :downfrom current :to 1 :by (if (getf startup :odd) 2 1)
                      :collect x)))
     (apply #'choices (mapcar (lambda (n)
                                (seq-list? (org-stars n)
