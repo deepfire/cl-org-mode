@@ -226,45 +226,128 @@
       (result (list :property (if append? :append :set)
                     (make-keyword (string-upcase name)) raw-value)))))
 
+(defparameter *org-startup*
+  '((:overview :content :showall :showeverything)
+    (:indent :noindent)
+    (:align :noalign)
+    (:inlineimages :noinlineimages)
+    (:latexpreview :nolatexpreview)
+    (:logdone :lognotedone :nologdone)
+    (:logrepeat :lognoterepeat :nologrepeat)
+    (:logreschedule :lognotereschedule :nologreschedule)
+    (:logredeadline :lognoteredeadline :nologredeadline)
+    (:logrefile :lognoterefile :nologrefile)
+    (:lognoteclock-out :nolognoteclock-out)
+    (:logdrawer :nologdrawer)
+    (:logstatesreversed :nologstatesreversed)
+    (:hidestars :showstars)
+    (:indent :noindent)
+    (:odd :oddeven)
+    (:customtime)
+    (:constcgs :constsi)
+    (:fninline :fnnoinline :fnlocal)
+    (:fnprompt :fnauto :fnconfirm :fnplain)
+    (:fnadjust :nofnadjust)
+    (:hideblocks :nohideblocks)
+    (:entitiespretty :entitiesplain)
+    ))
+
+(let ((set (make-hash-table :test 'eq)))
+  (dolist (xs *org-startup*)
+    (dolist (x xs)
+      (setf (gethash x set) xs)))
+  (defun org-startup-option? (x)
+    (gethash x set)))
+
 (defun org-header ()
-  (mdo (<- mix (sepby? (choice
-                        (org-option)
-                        (org-section))
-                       (newline)))
-       (result (append (list (list :header
-                                   (apply #'append (remove :section mix :key #'car))))
-                       (when-let ((sections (remove :section mix :key #'car :test (complement #'eql))))
-                         (list (cons :section
-                                     (apply #'append (mapcar #'rest sections)))))))))
+  "15.6 Summary of in-buffer settings"
+  (flet ((keywords-as-flags (xs)
+           (mapcan (rcurry #'list t) xs))
+         (parse-startup (xs)
+           (let ((all-opts (mapcar (compose #'make-keyword #'string-upcase)
+                                   (split-sequence:split-sequence #\Space xs
+                                                                  :remove-empty-subseqs t)))
+                 decided-co-sets
+                 valid unknown duplicate conflicted)
+             (dolist (o all-opts)
+               (let* ((co-set (org-startup-option? o))
+                      (conflicted? (find co-set decided-co-sets))
+                      (conflict (find-if (lambda (x) (find x valid)) co-set)))
+                 (cond ((not co-set)
+                        (push o unknown))
+                       ((find o valid)
+                        (push o duplicate))
+                       (conflicted?
+                        (push o conflicted)
+                        (push conflict conflicted))
+                       (t
+                        (push co-set decided-co-sets)
+                        (push o valid)))))
+             (setf valid (set-difference valid conflicted))
+             (values all-opts valid unknown duplicate conflicted))))
+    (mdo (<- mix (sepby? (choice
+                          (org-option)
+                          (org-section))
+                         (newline)))
+         (let ((options (apply #'append (remove :section mix :key #'car)))
+               (section (apply #'append (mapcar #'rest (remove :section mix :key #'car :test (complement #'eql))))))
+           (destructuring-bind (&key (startup "") &allow-other-keys) options
+             (multiple-value-bind (all valid unknown duplicate conflicted)
+                 (parse-startup startup)
+               (format t ";;; header raw:~{ ~S~}~%" options)
+               (format t ";;; header startup:~%")
+               (when valid
+                 (format t ";;;    valid:     ~{ ~S~}~%" valid))
+               (when unknown
+                 (format t ";;;    unknown:   ~{ ~S~}~%" unknown))
+               (when duplicate
+                 (format t ";;;    duplicate: ~{ ~S~}~%" duplicate))
+               (when conflicted
+                 (format t ";;;    conflicted:~{ ~S~}~%" conflicted))
+               (result `(:header
+                         ,(append (remove-from-plist options :startup)
+                                  (when valid
+                                    (list :startup (keywords-as-flags valid)))
+                                  (when (or unknown conflicted)
+                                    (list :startup-all (keywords-as-flags all))))
+                         ,@(when section
+                                 `(:section ,section))))))))))
+
+(defun access (tree &rest keys)
+  (if keys
+      (apply #'access (getf tree (first keys)) (rest keys))
+      tree))
 
 (defun header-nothing-p (x)
-  (and (null (cadr x))
-       (endp (cddr x))))
+  (and (endp (cdr x))
+       (endp (cadr x))))
 
-(defparameter *org-default-parameters*
+(defparameter *org-default-startup*
   '(:odd              nil
     :comment-keyword  "COMMENT"
     :quote-keyword    "QUOTE"
     :footnote-title   "Footnotes"
     :keywords        ("TODO" "DONE")
     :priorities      ("A" "B" "C"))
-  "Parameters, in absence of any headers.")
+  "So called 'startup' options, in absence of any headers.")
 
-(defun merge-parameters (stronger weaker)
+(defun merge-startup (stronger weaker)
   (append stronger weaker))
 
 ;;;
 ;;; Whole thing
 (defun org-parser ()
   (mdo
-    (<- header-and-pre-section (org-header))
-    (unless (header-nothing-p header-and-pre-section)
+    (<- initial (org-header))
+    (unless (header-nothing-p initial)
       (newline))
-    (<- entries    (sepby? (org-entry 1 (merge-parameters (first header-and-pre-section)
-                                                          *org-default-parameters*))
+    (<- entries    (sepby? (org-entry 1 (merge-startup (access initial
+                                                               :header
+                                                               :startup)
+                                                       *org-default-startup*))
                            (newline)))
     (result (cons :org
-                  (append header-and-pre-section entries)))))
+                  (append initial entries)))))
 
 ;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
 #-nil
@@ -425,8 +508,8 @@
 ;;
 ;;;
 ;;; Entry
-(defun org-entry (stars &optional (parameters *org-default-parameters*))
-  (destructuring-bind (&key odd &allow-other-keys) parameters
+(defun org-entry (stars &optional (startup *org-default-startup*))
+  (destructuring-bind (&key odd &allow-other-keys) startup
     (mdo
       (<- headline    (org-headline stars))
       (<- body
@@ -435,7 +518,7 @@
              (<- section  (opt-and-pre-newline?
                            (org-section)))
              (<- children (opt-and-pre-newline?
-                           (find-sepby-before? (org-entry (+ stars (if odd 2 1)) parameters)
+                           (find-sepby-before? (org-entry (+ stars (if odd 2 1)) startup)
                                                (newline)
                                                (choice
                                                 (org-closing-headline-variants stars odd)
@@ -559,9 +642,9 @@
                                           " "))
                              variants))))
 
-(defun org-headline (nstars &optional (parameters *org-default-parameters*))
+(defun org-headline (nstars &optional (startup *org-default-startup*))
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
-                       &allow-other-keys) parameters
+                       &allow-other-keys) startup
     (mdo
       (org-stars nstars)
       (<- commentedp (opt? (pre-white1? (tag :commented (chook? t comment-keyword)))))
