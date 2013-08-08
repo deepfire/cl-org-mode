@@ -533,7 +533,7 @@
 (defun org-title ()
   (hook? #'to-string
          (find-before* (line-constituent-but)
-                       (seq-list? (opt? (pre-white? (org-tags)))
+                       (seq-list? (opt? (pre-white1? (org-tags)))
                                   (newline)))))
 
 (defun org-priority (priorities)
