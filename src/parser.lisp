@@ -371,6 +371,7 @@
       (newline))
     (<- entries    (sepby? (org-top-entry (access initial :header :startup))
                            (newline)))
+    (opt? (newline))
     (result (cons :org
                   (append initial entries)))))
 
