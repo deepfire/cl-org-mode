@@ -203,7 +203,7 @@
 
 (defun org-option ()
   (mdo
-    "#+"
+    (pre-white? "#+")
     (<- name (org-name))
     (if (let ((up (string-upcase name)))
           (or (starts-with-subseq "BEGIN_" up)
@@ -211,9 +211,9 @@
         (zero)
         (context?))
     ":"
-    (<- value (pre-white? (line-but-of)))
+    (<- raw (pre-white? (line-but-of)))
     (result (list (make-keyword (string-upcase name))
-                  value))))
+                  raw))))
 
 (defun org-header ()
   (mdo (<- mix (sepby? (choice
