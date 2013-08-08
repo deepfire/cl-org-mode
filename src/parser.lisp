@@ -185,6 +185,20 @@
              (setf ,unreadp nil)
              (make-instance 'parser-possibility :tree ,inp :suffix ,inp)))))))
 
+(defun next-char-in? (name)
+  (with-next-char? (char)
+    (format t "~A next char: ~S~%" name char)))
+
+
+(defmacro c? (x)
+  (with-gensyms (res char)
+    `(mdo (format? "~S ?~%" ',x)
+          (with-next-char? (,char)
+            (format t "~S ? (next ~S)~%" ',x ,char))
+          (<- ,res ,x)
+          (format? "~S ok - ~S~%" ',x ,res)
+          (result ,res))))
+
 ;;;
 ;;; Org Syntax (draft)
 ;;
