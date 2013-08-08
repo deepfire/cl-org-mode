@@ -73,6 +73,9 @@
 (defun string-of (p)
   (hook? #'to-string (many? p)))
 
+(defun string-of-1+ (p)
+  (hook? #'to-string (many1? p)))
+
 (defun line-but-of (&rest except)
   (string-of (apply #'line-constituent-but except)))
 
@@ -549,7 +552,7 @@
                (choices
                 ;; (org-greater-element)
                 "*"
-                (pre-white? (choices "#+" (org-drawer-name)))
+                (pre-white? (choices "#+" (bracket? ":" (org-name) ":")))
                 (end?))))
        (result (rejoin +newline-string+ lines))))
 
