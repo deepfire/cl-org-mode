@@ -815,29 +815,27 @@
 ;;
 (defun org-affiliated-keyword ()
   "Deviation: allows optionals for keys other than CAPTION and RESULTS."
-  (flet ((keyword-key-name ()
-           (choices (caseless "CAPTION") (caseless "HEADER") (caseless "NAME") (caseless "PLOT") (caseless "RESULTS"))))
-    (mdo
-      (pre-white? "#+")
-      (choices
-       (mdo (<- key      (keyword-key-name))
-            (<- optional (opt? (mdo
-                                 "[" 
-                                 (<- ret (line-but-of-1+ #\[ #\]))
-                                 "]"
-                                 (result ret))))
-            ": "
-            (<- value    (line-but-of))
-            (result (append (list :key key)
-                            (when optional
-                              (list :optional optional))
-                            (list :value value))))
-       (mdo (caseless "ATTR_")
-            (<- backend (org-name))
-            ": "
-            (<- value   (line-but-of))
-            (result (list :attr backend
-                          :value value)))))))
+  (mdo
+    (pre-white? "#+")
+    (choices
+     (mdo (<- key      (org-name))
+          (<- optional (opt? (mdo
+                               "["
+                               (<- ret (line-but-of-1+ #\[ #\]))
+                               "]"
+                               (result ret))))
+          ": "
+          (<- value    (line-but-of))
+          (result (append (list :keyword key)
+                          (when optional
+                            (list :optional optional))
+                          (list :value value))))
+     (mdo (caseless "ATTR_")
+          (<- backend (org-name))
+          ": "
+          (<- value   (line-but-of))
+          (result (list :attribute backend
+                        :value value))))))
 
 ;; (org-parse 
 ;; "#+STARTUP: hidestars odd
