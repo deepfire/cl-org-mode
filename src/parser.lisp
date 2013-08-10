@@ -224,10 +224,10 @@
 ;;;
 ;;; Header
 (defun org-name ()
-  (string-of (choices (alphanum?) #\_ #\-)))
+  (string-of-1+ (choices (alphanum?) #\_ #\-)))
 
 (defun org-tag-name ()
-  (string-of (choices (alphanum?) #\_ #\@ #\# #\%)))
+  (string-of-1+ (choices (alphanum?) #\_ #\@ #\# #\%)))
 
 (defun org-option ()
   (mdo
