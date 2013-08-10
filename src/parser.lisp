@@ -429,9 +429,10 @@
       (declare (ignore lposn rposn line))
       (let ((fmt (format nil "; at ~~A, line ~~D, col ~~D:~~%~~A~~%~~~D@T^~~%" col)))
         (format t fmt place (1+ lineno) (1+ col) ctx))))
-  (defun try-org-file (filename &aux
-                                  (string (alexandria:read-file-into-string filename))
-                                  (cache  (make-string-position-cache string)))
+  (defun try-org-file (filename &key profile
+                       &aux
+                         (string (alexandria:read-file-into-string filename))
+                         (cache  (make-string-position-cache string)))
     (flet ((string-context (posn &key (around 0))
              (string-position-context-full string cache posn :around around))
            (top-hits (hash n &aux
@@ -454,18 +455,19 @@
         (declare (ignore vector-context))
         (if (and successp (null front))
             (let ((top-hits (top-hits seen-positions 25)))
-              (iter (for line in (split-sequence:split-sequence #\Newline string))
-                    (for lineno from 0)
-                    (format t ";   ~A~%" line)
-                    (dolist (line-top (remove lineno top-hits :test #'/= :key #'third))
-                      (destructuring-bind (posn hits lineno lineposn ctxstart ctxend) line-top
-                        (declare (ignore ctxstart ctxend))
-                        (let* ((col (- posn lineposn))
-                               (fmt (format nil ";;; ~~~D@T^  ~~D hits, posn ~~D:~~D:~~D~~%" col)))
-                          (format t fmt hits posn lineno col))))
-                    (finally
-                     (format t ";;; total context references: ~D~%"
-                             (apply #'+ (hash-table-values seen-positions)))))
+              (when profile
+                (iter (for line in (split-sequence:split-sequence #\Newline string))
+                      (for lineno from 0)
+                      (format t ";   ~A~%" line)
+                      (dolist (line-top (remove lineno top-hits :test #'/= :key #'third))
+                        (destructuring-bind (posn hits lineno lineposn ctxstart ctxend) line-top
+                          (declare (ignore ctxstart ctxend))
+                          (let* ((col (- posn lineposn))
+                                 (fmt (format nil ";;; ~~~D@T^  ~~D hits, posn ~~D:~~D:~~D~~%" col)))
+                            (format t fmt hits posn lineno col))))
+                      (finally
+                       (format t ";;; total context references: ~D~%"
+                               (apply #'+ (hash-table-values seen-positions))))))
               result)
             (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
               (multiple-value-bind (lineno lposn rposn line ctx col) (string-context failure-posn :around 2)
