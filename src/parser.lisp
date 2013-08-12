@@ -110,6 +110,11 @@
             (collect elt into no))
         (finally (return (values yes no)))))
 
+(defun tree-getf (tree &rest keys)
+  (if keys
+      (apply #'access (getf tree (first keys)) (rest keys))
+      tree))
+
 (defun to-string (xs)
   (coerce xs 'string))
 
@@ -270,31 +275,6 @@
 (defun org-tag-name ()
   (string-of-1+ (choices (alphanum?) #\_ #\@ #\# #\%)))
 
-(defun org-option ()
-  (mdo
-    (pre-white? "#+")
-    (<- name (org-name))
-    (if (let ((up (string-upcase name)))
-          (or (starts-with-subseq "BEGIN_" up)
-              (string= "BEGIN" up)))
-        (zero)
-        (context?))
-    ":"
-    (<- raw (pre-white? (line-but-of)))
-    (result (list (make-keyword (string-upcase name))
-                  raw))))
-
-(defun org-global-property ()
-  "7.1 Property syntax"
-  (mdo
-    (pre-white? "#+PROPERTY:")
-    (<- raw-name (pre-white? (org-name)))
-    (<- raw-value (pre-white1? (line-but-of)))
-    (let ((append? (ends-with #\+ raw-name))
-          (name (string-right-trim '(#\+) raw-name)))
-      (result (list :property (if append? :append :set)
-                    (make-keyword (string-upcase name)) raw-value)))))
-
 (defparameter *org-startup*
   '((:overview :content :showall :showeverything)
     (:indent :noindent)
@@ -330,7 +310,12 @@
 
 (defun org-header ()
   "15.6 Summary of in-buffer settings"
-  (flet ((keywords-as-flags (xs)
+  (flet ((org-keywords-as-plist (xs)
+           (iter (for x in xs)
+                 (appending (destructuring-bind (&key keyword value) x
+                              (list (make-keyword (string-upcase keyword))
+                                    value)))))
+         (keywords-as-flags (xs)
            (mapcan (rcurry #'list t) xs))
          (parse-startup (xs)
            (let ((all-opts (mapcar (compose #'make-keyword #'string-upcase)
@@ -354,42 +339,38 @@
                         (push o valid)))))
              (setf valid (set-difference valid conflicted))
              (values all-opts valid unknown duplicate conflicted))))
-    (mdo (<- mix (sepby? (choice
-                          (org-option)
-                          (org-section))
-                         (newline)))
-         (let ((options (apply #'append (remove :section mix :key #'car)))
-               (section (apply #'append (mapcar #'rest (remove :section mix :key #'car :test (complement #'eql))))))
-           (destructuring-bind (&key (startup "") &allow-other-keys) options
-             (multiple-value-bind (all valid unknown duplicate conflicted)
-                 (parse-startup startup)
-               (format t ";;; header raw:~{ ~S~}~%" options)
-               (format t ";;; header startup:~%")
-               (when valid
-                 (format t ";;;    valid:     ~{ ~S~}~%" valid))
-               (when unknown
-                 (format t ";;;    unknown:   ~{ ~S~}~%" unknown))
-               (when duplicate
-                 (format t ";;;    duplicate: ~{ ~S~}~%" duplicate))
-               (when conflicted
-                 (format t ";;;    conflicted:~{ ~S~}~%" conflicted))
-               (result `(:header
-                         ,(append (remove-from-plist options :startup)
-                                  (when valid
-                                    (list :startup (keywords-as-flags valid)))
-                                  (when (or unknown conflicted)
-                                    (list :startup-all (keywords-as-flags all))))
-                         ,@(when section
-                                 `(:section ,section))))))))))
-
-(defun access (tree &rest keys)
-  (if keys
-      (apply #'access (getf tree (first keys)) (rest keys))
-      tree))
+    (named-seq*
+     (<- mix (org-section))
+     (multiple-value-bind (raw-keywords section-content)
+         (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
+       (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
+         (format t ";;; header options:~{ ~S~}~%" keyword-plist)
+         (when section-content
+           (format t ";;; header section: ~S~%" section-content))
+         (destructuring-bind (&key (startup "") &allow-other-keys) keyword-plist
+           (multiple-value-bind (all valid unknown duplicate conflicted)
+               (parse-startup startup)
+             (format t ";;; header startup:~%")
+             (when valid
+               (format t ";;;    valid:     ~{ ~S~}~%" valid))
+             (when unknown
+               (format t ";;;    unknown:   ~{ ~S~}~%" unknown))
+             (when duplicate
+               (format t ";;;    duplicate: ~{ ~S~}~%" duplicate))
+             (when conflicted
+               (format t ";;;    conflicted:~{ ~S~}~%" conflicted))
+             `((:header
+                ,(append (remove-from-plist keyword-plist :startup)
+                         (when valid
+                           (list :startup (keywords-as-flags valid)))
+                         (when (or unknown conflicted)
+                           (list :startup-all (keywords-as-flags all)))))
+               ,@(when section-content
+                       (list (list :section section-content)))))))))))
 
 (defun header-nothing-p (x)
   (and (endp (cdr x))
-       (endp (cadr x))))
+       (endp (cadar x))))
 
 (defparameter *org-default-startup*
   '(:odd              nil
@@ -410,7 +391,7 @@
     (<- initial (org-header))
     (unless (header-nothing-p initial)
       (newline))
-    (<- entries    (sepby? (org-top-entry (access initial :header :startup))
+    (<- entries    (sepby? (org-top-entry (tree-getf (first initial) :header :startup))
                            (newline)))
     (opt? (newline))
     (result (cons :org
@@ -596,8 +577,10 @@
                           (org-child-entry stars startup)
                           (newline)
                           (choices
-                           (org-closing-headline-variants stars startup)
-                           (seq-list* (newline) (end?))
+                           (seq-list*
+                            (newline)
+                            (choice (end?)
+                                    (org-closing-headline-variants stars startup)))
                            (end?)))))
            (result (progn
                      (append (when section
@@ -885,11 +868,11 @@
     (pre-white? "#+")
     (choices
      (named-seq* (<- key      (org-name))
-                 (<- optional (opt? (mdo
+                 (<- optional (opt? (named-seq*
                                       "["
                                       (<- ret (line-but-of-1+ #\[ #\]))
                                       "]"
-                                      (result ret))))
+                                      ret)))
                  ": "
                  (<- value    (line-but-of))
                  (append (list :keyword key)
