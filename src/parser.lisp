@@ -61,6 +61,14 @@
         (when (and p-result q-result)
           (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))
 
+(defun chook-still? (result p)
+  "Parser: return result if p matches, but do no advance"
+  (parser-combinators::with-parsers (p)
+    (define-oneshot-result inp is-unread
+      (let ((p-result (funcall (funcall p inp))))
+        (when p-result
+          (make-instance 'parser-possibility :tree result :suffix inp))))))
+
 (defun failing? (p)
   (named-seq*
    p
@@ -208,6 +216,15 @@
     (<- tail (find-before* (mdo* sep (except? p stop))
                            (mdo* sep stop)))
     (cons head tail)))
+
+(defun find-sepby1-before-nonsep? (p sep stop)
+  (mdo
+    (<- head p)
+    (hook? (curry #'cons head)
+           (choices
+            (chook-still? nil stop)
+            (find-before* (mdo* sep p)
+                          stop)))))
 
 (defun upto-end-of-line? (x)
   (mdo (<- xs (find-before? x (choice (newline)
