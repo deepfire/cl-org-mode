@@ -618,6 +618,9 @@
        (result (list :section filtered-content))
        (zero)))))
 
+(defun org-greater-signature ()
+  (pre-white? (choices "#+" (bracket? ":" (org-name) ":"))))
+
 (defun org-element ()
   "Actually org-paragraph."
   (choice
@@ -627,8 +630,8 @@
                 (newline)
                 (choices
                  ;; (org-greater-element)
-                 (seq-list? (newline) "*")
-                 (pre-white? (choices "#+" (bracket? ":" (org-name) ":")))
+                 (seq-list? (newline) (choice1 "*"
+                                               (org-greater-signature)))
                  (end?))))
      (rejoin +newline-string+ lines))
    (chook? "" (end?))))
@@ -637,11 +640,13 @@
   (choices
    (chook-still? "" (end?))
    (chook-still? "" (newline))
-   (mdo
-     (<- first-char (line-constituent-but #\*))
-     (<- rest       (find-before* (line-constituent-but) (choice1 (newline)
-                                                                  (end?))))
-     (result (concatenate 'string (list first-char) rest)))))
+   (except? (mdo
+              (<- first-char (line-constituent-but #\*))
+              (<- rest       (find-before* (line-constituent-but)
+                                           (choice1 (newline)
+                                                    (end?))))
+              (result (concatenate 'string (list first-char) rest)))
+            (org-greater-signature))))
 
 (defparameter *testcases*
   '(;; 0
