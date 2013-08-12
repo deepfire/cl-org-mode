@@ -40,6 +40,17 @@
       (<- ,ret ,(lastcar spec))
       ,ret)))
 
+(defmacro with-next-char? ((var) &body body)
+  (with-gensyms (inp unreadp)
+    `(lambda (,inp)
+       (let ((,unreadp t))
+         (lambda ()
+           (let ((,var (parser-combinators::context-peek ,inp)))
+             ,@body)
+           (when ,unreadp
+             (setf ,unreadp nil)
+             (make-instance 'parser-possibility :tree ,inp :suffix ,inp)))))))
+
 (defun before* (p q)
   "Non-backtracking parser: Find a p before q, doesn't consume q."
   (parser-combinators::with-parsers (p q)
@@ -49,6 +60,38 @@
              (q-result (funcall (funcall q p-suffix))))
         (when (and p-result q-result)
           (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))
+
+(defun failing? (p)
+  (named-seq*
+   p
+   (zero)))
+
+(defun format? (fmt &rest args)
+  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
+
+(defmacro ? (x)
+  (with-gensyms (res)
+    `(named-seq*
+      (format? "~S ?~%" ',x)
+      (<- ,res ,x)
+      (progn
+        (format t "~S ok - ~S~%" ',x ,res)
+        ,res))))
+
+(defun next-char-in? (name)
+  (with-next-char? (char)
+    (format t "~A, next char: ~S~%" name char)))
+
+
+(defmacro c? (x)
+  (with-gensyms (res char)
+    `(named-seq*
+      (with-next-char? (,char)
+        (format t "~S ? (next ~S)~%" ',x ,char))
+      (<- ,res ,x)
+      (progn
+        (format t "~S ok - ~S~%" ',x ,res)
+        ,res))))
 
 ;;;
 ;;; Tools
@@ -111,21 +154,22 @@
   (many1? (spacetab?)))
 
 (defun pre-white1? (x)
-  (mdo
+  (mdo*
     (spacetabs1?)
     x))
 
 (defun pre-white? (x)
-  (mdo
+  (mdo*
     (spacetabs?)
     x))
 
 (defun pre-newline? (x &key retain-newline)
-  (mdo (newline)
-       (<- ret x)
-       (result (if retain-newline
-                   (concatenate 'string +newline-string+ ret)
-                   ret))))
+  (named-seq*
+   (newline)
+   (<- ret x)
+   (if retain-newline
+       (concatenate 'string +newline-string+ ret)
+       ret)))
 
 (defun newline ()
   (chook? +newline-string+
@@ -138,80 +182,38 @@
   (choices (string-downcase x) (string-upcase x)))
 
 (defun post-newline? (x)
-  (mdo
+  (named-seq*
     (<- ret x)
     (newline)
-    (result ret)))
+    ret))
 
 (defun opt-and-pre-newline? (x)
   (opt?
-   (mdo
-     (newline)
-     x)))
+   (mdo*
+    (newline)
+    x)))
 
 (defun find-sepby-before? (p sep stop)
   (choices
    (chook? nil stop)
-   (mdo
+   (named-seq*
      (<- head (except? p stop))
-     (<- tail (find-before* (mdo sep
-                                 (except? p stop))
+     (<- tail (find-before* (mdo* sep (except? p stop))
                             stop))
-     (result (cons head tail)))))
+     (cons head tail))))
 
 (defun find-sepby1-before? (p sep stop)
-  (mdo
+  (named-seq*
     (<- head (except? p stop))
-    (<- tail (find-before* (mdo sep
-                                (except? p stop))
-                           (mdo sep stop)))
-    (result (cons head tail))))
+    (<- tail (find-before* (mdo* sep (except? p stop))
+                           (mdo* sep stop)))
+    (cons head tail)))
 
 (defun upto-newline? (x)
   (mdo (<- xs (find-before? x (newline)))
        (if (not (endp (rest xs)))
            (zero)
            (result (first xs)))))
-
-(defun format? (fmt &rest args)
-  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
-
-(defun failing? (p)
-  (mdo
-    p
-    (zero)))
-
-(defmacro ? (x)
-  (with-gensyms (res)
-    `(mdo (format? "~S ?~%" ',x)
-          (<- ,res ,x)
-          (format? "~S ok - ~S~%" ',x ,res)
-          (result ,res))))
-
-(defmacro with-next-char? ((var) &body body)
-  (with-gensyms (inp unreadp)
-    `(lambda (,inp)
-       (let ((,unreadp t))
-         (lambda ()
-           (let ((,var (parser-combinators::context-peek ,inp)))
-             ,@body)
-           (when ,unreadp
-             (setf ,unreadp nil)
-             (make-instance 'parser-possibility :tree ,inp :suffix ,inp)))))))
-
-(defun next-char-in? (name)
-  (with-next-char? (char)
-    (format t "~A next char: ~S~%" name char)))
-
-
-(defmacro c? (x)
-  (with-gensyms (res char)
-    `(mdo (format? "~S ?~%" ',x)
-          (with-next-char? (,char)
-            (format t "~S ? (next ~S)~%" ',x ,char))
-          (<- ,res ,x)
-          (format? "~S ok - ~S~%" ',x ,res)
-          (result ,res))))
 
 ;;;
 ;;; Org Syntax (draft)
@@ -666,16 +668,16 @@
                                   (newline)))))
 
 (defun org-priority (priorities)
-  (mdo "[#"
-       (<- priority (apply #'choices priorities))
-       "]"
-       (result (string priority))))
+  (named-seq* "[#"
+              (<- priority (apply #'choices priorities))
+              "]"
+              (string priority)))
 
 (defun org-tags ()
-  (mdo ":"
-       (<- tags (sepby? (org-tag-name) #\:))
-       ":"
-       (result tags)))
+  (named-seq* ":"
+              (<- tags (sepby? (org-tag-name) #\:))
+              ":"
+              tags))
 
 (defun org-stars (n)
   (times? #\* n))
@@ -832,24 +834,24 @@
   (mdo
     (pre-white? "#+")
     (choices
-     (mdo (<- key      (org-name))
-          (<- optional (opt? (mdo
-                               "["
-                               (<- ret (line-but-of-1+ #\[ #\]))
-                               "]"
-                               (result ret))))
-          ": "
-          (<- value    (line-but-of))
-          (result (append (list :keyword key)
-                          (when optional
-                            (list :optional optional))
-                          (list :value value))))
-     (mdo (caseless "ATTR_")
-          (<- backend (org-name))
-          ": "
-          (<- value   (line-but-of))
-          (result (list :attribute backend
-                        :value value))))))
+     (named-seq* (<- key      (org-name))
+                 (<- optional (opt? (mdo
+                                      "["
+                                      (<- ret (line-but-of-1+ #\[ #\]))
+                                      "]"
+                                      (result ret))))
+                 ": "
+                 (<- value    (line-but-of))
+                 (append (list :keyword key)
+                         (when optional
+                           (list :optional optional))
+                         (list :value value)))
+     (named-seq* (caseless "ATTR_")
+                 (<- backend (org-name))
+                 ": "
+                 (<- value   (line-but-of))
+                 (list :attribute backend
+                       :value value)))))
 
 ;; (org-parse 
 ;; "#+STARTUP: hidestars odd
