@@ -209,8 +209,9 @@
                            (mdo* sep stop)))
     (cons head tail)))
 
-(defun upto-newline? (x)
-  (mdo (<- xs (find-before? x (newline)))
+(defun upto-end-of-line? (x)
+  (mdo (<- xs (find-before? x (choice (newline)
+                                      (end?))))
        (if (not (endp (rest xs)))
            (zero)
            (result (first xs)))))
