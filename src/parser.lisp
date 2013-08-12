@@ -340,7 +340,7 @@
              (setf valid (set-difference valid conflicted))
              (values all-opts valid unknown duplicate conflicted))))
     (named-seq*
-     (<- mix (org-section))
+     (<- mix (opt? (org-section)))
      (multiple-value-bind (raw-keywords section-content)
          (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
        (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
@@ -389,8 +389,9 @@
 (defun org-parser ()
   (mdo
     (<- initial (org-header))
-    (unless (header-nothing-p initial)
-      (newline))
+    (if (header-nothing-p initial)
+        (context?)
+        (newline))
     (<- entries    (sepby? (org-top-entry (tree-getf (first initial) :header :startup))
                            (newline)))
     (opt? (newline))
