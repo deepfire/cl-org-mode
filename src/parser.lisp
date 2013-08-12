@@ -103,6 +103,13 @@
 
 ;;;
 ;;; Tools
+(defun unzip (fn sequence &key (key #'identity))
+  (iter (for elt in sequence)
+        (if (funcall fn (funcall key elt))
+            (collect elt into yes)
+            (collect elt into no))
+        (finally (return (values yes no)))))
+
 (defun to-string (xs)
   (coerce xs 'string))
 
