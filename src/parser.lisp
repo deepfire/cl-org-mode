@@ -181,8 +181,8 @@
 
 (defun newline ()
   (chook? +newline-string+
-          (choices #\Linefeed
-                   #\Newline
+          (choices #\Newline
+                   #\Linefeed
                    #\Return
                    (seq-list? #\Return #\Linefeed))))
 
@@ -578,61 +578,77 @@
 
 (defun org-entry (stars &optional (startup *org-default-startup*))
   (mdo
-    (<- headline    (org-headline stars))
+    (<- headline (org-headline stars))
     (<- body
         (opt?
          (mdo
            (<- section  (opt-and-pre-newline?
                          (org-section)))
            (<- children (opt-and-pre-newline?
-                         (find-sepby1-before? (org-child-entry stars startup)
-                                              (newline)
-                                              (choice
-                                               (org-closing-headline-variants stars startup)
-                                               (end?)))))
-           (result (append (when section
-                             (list section))
-                           children)))))
-    (result (append (list :entry headline)
-                    body))))
+                         (find-sepby1-before-nonsep?
+                          (org-child-entry stars startup)
+                          (newline)
+                          (choices
+                           (org-closing-headline-variants stars startup)
+                           (seq-list* (newline) (end?))
+                           (end?)))))
+           (result (progn
+                     (append (when section
+                               (list section))
+                             children))))))
+    (result
+     (append (list :entry headline)
+             body))))
 
 ;;;
 ;;; Section
 (defun org-section ()
-  (mdo
-    (<- content (sepby1? (choices
-                          (org-greater-element)
-                          (org-element))
-                         (newline)))
-    (result (list :section content))))
+  (choice1
+   (chook? (list :section "") (end?))
+   (mdo
+     (<- content (find-sepby1-before-nonsep?
+                  (choices
+                   (org-greater-element)
+                   (org-affiliated-keyword)
+                   (org-element))
+                  (newline)
+                  (choice (seq-list? (newline) "*")
+                          (end?))))
+     (if-let ((filtered-content (remove "" content :test #'equal)))
+       (result (list :section filtered-content))
+       (zero)))))
 
 (defun org-element ()
   "Actually org-paragraph."
-  (mdo
-    (<- lines (find-sepby1-before?
-               (org-element-line)
-               (newline)
-               (choices
-                ;; (org-greater-element)
-                "*"
-                (pre-white? (choices "#+" (bracket? ":" (org-name) ":")))
-                (end?))))
-       (result (rejoin +newline-string+ lines))))
+  (choice
+   (named-seq*
+     (<- lines (find-sepby1-before-nonsep?
+                (org-element-line)
+                (newline)
+                (choices
+                 ;; (org-greater-element)
+                 (seq-list? (newline) "*")
+                 (pre-white? (choices "#+" (bracket? ":" (org-name) ":")))
+                 (end?))))
+     (rejoin +newline-string+ lines))
+   (chook? "" (end?))))
 
 (defun org-element-line ()
-  (choice1
+  (choices
+   (chook-still? "" (end?))
+   (chook-still? "" (newline))
    (mdo
      (<- first-char (line-constituent-but #\*))
-     (<- rest       (find-before* (line-constituent-but) (newline)))
-     (result (concatenate 'string (list first-char) rest)))
-   (upto-newline? "")))
+     (<- rest       (find-before* (line-constituent-but) (choice1 (newline)
+                                                                  (end?))))
+     (result (concatenate 'string (list first-char) rest)))))
 
 (defparameter *testcases*
   '(;; 0
     ("* a" (:ENTRY (:TITLE "a")))
     ;; 1
     ("* a
-"          (:ENTRY (:TITLE "a")))
+"          (:ENTRY (:TITLE "a") (:SECTION "")))
     ;; 2
     ("* a
    a text" (:ENTRY (:TITLE "a")
@@ -641,14 +657,14 @@
     ("* a
 ** b
 "          (:ENTRY (:TITLE "a")
-            (:ENTRY (:TITLE "b"))))
+            (:ENTRY (:TITLE "b") (:SECTION ""))))
     ;; 4
     ("* a
    a text
 ** b
 "          (:ENTRY (:TITLE "a")
             (:SECTION ("   a text"))
-            (:ENTRY (:TITLE "b"))))
+            (:ENTRY (:TITLE "b") (:SECTION ""))))
     ;; 5
     ("* a
 
@@ -667,12 +683,16 @@
 
 ")))))))
 
-(defun test-org-entry ()
+(defun test-org-entry (&optional trace)
   (values-list
    (mapcan (lambda (tc n)
+             (when trace
+               (format t "---------------- #~D~%" n))
              (destructuring-bind (input expected) tc
                (let ((output (parse-string* (org-entry 1) input)))
                  (unless (equal output expected)
+                   (when trace
+                     (format t "-~%~S~%~S~%~S~%" n input output))
                    (list '_ n input output)))))
            *testcases*
            (iota (length *testcases*)))))
@@ -683,7 +703,7 @@
   (hook? #'to-string
          (find-before* (line-constituent-but)
                        (seq-list? (opt? (pre-white1? (org-tags)))
-                                  (newline)))))
+                                  (choice1 (newline) (end?))))))
 
 (defun org-priority (priorities)
   (named-seq* "[#"
