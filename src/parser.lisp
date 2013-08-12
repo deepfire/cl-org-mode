@@ -477,7 +477,7 @@
         (declare (ignore vector-context))
         (if (and successp (null front))
             (let ((top-hits (top-hits seen-positions 25)))
-              (when profile
+              (when (eq profile :full)
                 (iter (for line in (split-sequence:split-sequence #\Newline string))
                       (for lineno from 0)
                       (format t ";   ~A~%" line)
@@ -486,10 +486,10 @@
                           (declare (ignore ctxstart ctxend))
                           (let* ((col (- posn lineposn))
                                  (fmt (format nil ";;; ~~~D@T^  ~~D hits, posn ~~D:~~D:~~D~~%" col)))
-                            (format t fmt hits posn lineno col))))
-                      (finally
-                       (format t ";;; total context references: ~D~%"
-                               (apply #'+ (hash-table-values seen-positions))))))
+                            (format t fmt hits posn lineno col))))))
+              (when profile
+                (format t ";;; total context references: ~D~%"
+                        (apply #'+ (hash-table-values seen-positions))))
               result)
             (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
               (multiple-value-bind (lineno lposn rposn line ctx col) (string-context failure-posn :around 2)
@@ -499,9 +499,9 @@
         #+nil
         (iter (for (posn lineno hits) in )
               (print-hit posn hits)))))
-  (defun test ()
+  (defun test (&key profile)
     (dolist (f *org-files*)
-      (try-org-file f))))
+      (time (try-org-file f :profile profile)))))
 
 (defun org-parse-string (string)
   (parse-string* (org-parser) string))
