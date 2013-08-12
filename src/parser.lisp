@@ -120,11 +120,6 @@
     (spacetabs?)
     x))
 
-(defun post-white? (x)
-  (mdo
-    (<- ret x)
-    (result ret)))
-
 (defun pre-newline? (x &key retain-newline)
   (mdo (newline)
        (<- ret x)
