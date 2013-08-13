@@ -746,15 +746,16 @@
               tags))
 
 (defun org-stars (n)
-  (times? #\* n))
+  (seq-list* (times? #\* n)
+             (chookahead? t " ")))
 
 (defun org-closing-headline-variants (current startup)
   (let ((variants (loop :for x :downfrom current :to 1 :by (if (getf startup :odd) 2 1)
                      :collect x)))
-    (apply #'choices (mapcar (lambda (n)
-                               (seq-list? (org-stars n)
-                                          " "))
-                             variants))))
+    (apply #'choices1 (mapcar (lambda (n)
+                                (seq-list* (org-stars n)
+                                           " "))
+                              variants))))
 
 (defun org-headline (nstars &optional (startup *org-default-startup*))
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
@@ -906,7 +907,7 @@
                                       (<- ret (line-but-of-1+ #\[ #\]))
                                       "]"
                                       ret)))
-                 ": "
+                 (opt? ":") " "
                  (<- value    (line-but-of))
                  (append (list :keyword key)
                          (when optional
