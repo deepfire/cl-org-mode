@@ -625,6 +625,16 @@
 
 ;;;
 ;;; Section
+(defun org-greater-signature ()
+  (pre-white? (choice1 "#+" (bracket? ":" (org-name) ":"))))
+
+(defun org-greater-end-signature ()
+  (pre-white? (choice1 (seq-list* "#+END" (choice1 "_"
+                                                   (before* (opt? ":")
+                                                            (choice1 (end?)
+                                                                     (newline)))))
+                       ":END:")))
+
 (defun org-section ()
   (choice1
    (chook? (list :section "") (end?))
@@ -635,14 +645,13 @@
                    (org-affiliated-keyword)
                    (org-element))
                   (newline)
-                  (choice (seq-list? (newline) "*")
-                          (end?))))
+                  (choice1 (seq-list* (newline)
+                                      (choice1 "*"
+                                               (org-greater-end-signature)))
+                           (end?))))
      (if-let ((filtered-content (remove "" content :test #'equal)))
        (result (list :section filtered-content))
        (zero)))))
-
-(defun org-greater-signature ()
-  (pre-white? (choices1 "#+" (bracket? ":" (org-name) ":"))))
 
 (defun org-element ()
   "Actually org-paragraph."
@@ -654,7 +663,8 @@
                 (choices
                  ;; (org-greater-element)
                  (seq-list? (newline) (choice1 "*"
-                                               (org-greater-signature)))
+                                                (org-greater-signature)
+                                                (end?)))
                  (end?))))
      (rejoin +newline-string+ lines))
    (chook? "" (end?))))
@@ -808,13 +818,13 @@
     (<- name (org-name))
     (<- parameters (opt? (pre-white1? (line-but-of))))
     (newline)
-    (<- contents (find-before* (item)
-                               (seq-list?
-                                (caseless "#+END_") name (newline))))
-    (pre-white? (caseless "#+END_")) name
+    (<- contents (org-section))
+    (newline)
+    (pre-white? (caseless "#+END_"))
+    name
     (result (list :block name
                   :parameters parameters
-                  :contents (to-string contents)))))
+                  :contents contents))))
 
 ;;;
 ;;; Drawer
@@ -835,10 +845,10 @@
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (<- name (pre-white? (bracket? ":" (org-name) ":")))
+    (<- name (pre-white? (bracket? ":" (except? (org-name) "END") ":")))
     (newline)
     (<- contents (find-before* (item)
-                               (seq-list?
+                               (seq-list*
                                 (pre-white? (caseless ":END:")) (newline))))
     (pre-white? (caseless ":END:"))
     (result (list :drawer name
@@ -860,16 +870,16 @@
 (defun org-dynamic-block ()
   (mdo
     (pre-white? (caseless "#+BEGIN:"))
-    (<- name (pre-white? (line-but-of #\Space)))
+    (<- name (pre-white1? (line-but-of #\Space)))
     (<- parameters (opt? (pre-white? (line-but-of))))
     (newline)
-    (<- contents (find-before* (item)
-                               (seq-list?
-                                (pre-white? (caseless "#+END:")) (newline))))
-    (pre-white? (caseless "#+END:"))
+    (<- contents (org-section))
+    (newline)
+    (pre-white? (seq-list* (caseless "#+END")
+                           (before* (opt? ":") (choice1 (end?) (newline)))))
     (result (list :dynamic-block name
                   :parameters parameters
-                  :contents (to-string contents)))))
+                  :contents contents))))
 
 ;;;
 ;;; Affiliated keyword
