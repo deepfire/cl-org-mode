@@ -61,7 +61,7 @@
         (when (and p-result q-result)
           (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))
 
-(defun chook-still? (result p)
+(defun chookahead? (result p)
   "Parser: return result if p matches, but do no advance"
   (parser-combinators::with-parsers (p)
     (define-oneshot-result inp is-unread
@@ -234,7 +234,7 @@
     (<- head p)
     (hook? (curry #'cons head)
            (choices
-            (chook-still? nil stop)
+            (chookahead? nil stop)
             (find-before* (mdo* sep p)
                           stop)))))
 
@@ -629,8 +629,8 @@
 
 (defun org-element-line ()
   (choices
-   (chook-still? "" (end?))
-   (chook-still? "" (newline))
+   (chookahead? "" (end?))
+   (chookahead? "" (newline))
    (except? (mdo
               (<- first-char (line-constituent-but #\*))
               (<- rest       (find-before* (line-constituent-but)
