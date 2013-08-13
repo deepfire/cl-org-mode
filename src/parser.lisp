@@ -40,13 +40,26 @@
       (<- ,ret ,(lastcar spec))
       ,ret)))
 
-(defmacro with-next-char? ((var) &body body)
+(defparameter *position-cache* nil)
+
+(defun string-position (posn)
+  (multiple-value-bind (lineno lposn)
+      (string-position-context *position-cache* posn)
+    (values lineno (- posn lposn))))
+
+(defmacro with-posn-info? ((charvar linevar colvar) &body body)
   (with-gensyms (inp unreadp)
     `(lambda (,inp)
        (let ((,unreadp t))
          (lambda ()
-           (let ((,var (parser-combinators::context-peek ,inp)))
-             ,@body)
+           (let ((,charvar (parser-combinators::context-peek ,inp)))
+             (declare (ignorable ,charvar))
+             (multiple-value-bind (,linevar ,colvar)
+                 (string-position (parser-combinators::position-of ,inp))
+               (declare (ignorable ,colvar))
+               (let ((,linevar (1+ ,linevar)))
+                 (declare (ignorable ,linevar))
+                 ,@body)))
            (when ,unreadp
              (setf ,unreadp nil)
              (make-instance 'parser-possibility :tree ,inp :suffix ,inp)))))))
@@ -86,16 +99,16 @@
         (format t "~S ok - ~S~%" ',x ,res)
         ,res))))
 
-(defun next-char-in? (name)
-  (with-next-char? (char)
-    (format t "~A, next char: ~S~%" name char)))
+(defun desc-posn? (name)
+  (with-posn-info? (char line col)
+    (format t "~A, line:col ~D:~D, next char: ~S~%" name line col char)))
 
 
 (defmacro c? (x)
-  (with-gensyms (res char)
+  (with-gensyms (res char line col)
     `(named-seq*
-      (with-next-char? (,char)
-        (format t "~S ? (next ~S)~%" ',x ,char))
+      (with-posn-info? (,char ,line ,col)
+        (format t "~S ? (next ~S, line:col ~D:~D)~%" ',x ,char ,line ,col))
       (<- ,res ,x)
       (progn
         (format t "~S ok - ~S~%" ',x ,res)
