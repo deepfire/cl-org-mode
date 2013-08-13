@@ -207,7 +207,7 @@
 (defun newline ()
   (chook? +newline-string+
           (choices1 #\Newline
-                    (seq-list? #\Return #\Newline)
+                    (seq-list* #\Return #\Newline)
                     #\Linefeed
                     #\Return)))
 
@@ -662,7 +662,7 @@
                 (newline)
                 (choices
                  ;; (org-greater-element)
-                 (seq-list? (newline) (choice1 "*"
+                 (seq-list* (newline) (choices1 "*"
                                                 (org-greater-signature)
                                                 (end?)))
                  (end?))))
@@ -740,7 +740,7 @@
 (defun org-title ()
   (hook? #'to-string
          (find-before* (line-constituent-but)
-                       (seq-list? (opt? (pre-white1? (org-tags)))
+                       (seq-list* (opt? (pre-white1? (org-tags)))
                                   (choice1 (newline) (end?))))))
 
 (defun org-priority (priorities)
