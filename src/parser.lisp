@@ -206,10 +206,10 @@
 
 (defun newline ()
   (chook? +newline-string+
-          (choices #\Newline
-                   #\Linefeed
-                   #\Return
-                   (seq-list? #\Return #\Linefeed))))
+          (choices1 #\Newline
+                    (seq-list? #\Return #\Newline)
+                    #\Linefeed
+                    #\Return)))
 
 (defun caseless (x)
   (choices (string-downcase x) (string-upcase x)))
