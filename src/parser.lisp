@@ -104,15 +104,21 @@
     (format t "~A, line:col ~D:~D, next char: ~S~%" name line col char)))
 
 
+(defun call-with-maybe-tracing (tracep mark fn)
+  (if tracep
+      (named-seq*
+       (with-posn-info? (char line col)
+         (format t "~S ? (next ~S, line:col ~D:~D)~%" mark char line col))
+       (<- res (funcall fn))
+       (progn
+         (format t "~S ok - ~S~%" mark res)
+         res))
+      (funcall fn)))
+
+(defvar *debug-mode* nil)
+
 (defmacro c? (x)
-  (with-gensyms (res char line col)
-    `(named-seq*
-      (with-posn-info? (,char ,line ,col)
-        (format t "~S ? (next ~S, line:col ~D:~D)~%" ',x ,char ,line ,col))
-      (<- ,res ,x)
-      (progn
-        (format t "~S ok - ~S~%" ',x ,res)
-        ,res))))
+  `(call-with-maybe-tracing *debug-mode* ',x (lambda () ,x)))
 
 ;;;
 ;;; Tools
