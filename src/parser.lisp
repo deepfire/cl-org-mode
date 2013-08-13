@@ -212,7 +212,7 @@
                     #\Return)))
 
 (defun caseless (x)
-  (choices (string-downcase x) (string-upcase x)))
+  (choices1 (string-downcase x) (string-upcase x)))
 
 (defun post-newline? (x)
   (named-seq*
@@ -283,10 +283,10 @@
 ;;;
 ;;; Header
 (defun org-name ()
-  (string-of-1+ (choices (alphanum?) #\_ #\-)))
+  (string-of-1+ (choices1 (alphanum?) #\_ #\-)))
 
 (defun org-tag-name ()
-  (string-of-1+ (choices (alphanum?) #\_ #\@ #\# #\%)))
+  (string-of-1+ (choices1 (alphanum?) #\_ #\@ #\# #\%)))
 
 (defparameter *org-startup*
   '((:overview :content :showall :showeverything)
@@ -642,7 +642,7 @@
        (zero)))))
 
 (defun org-greater-signature ()
-  (pre-white? (choices "#+" (bracket? ":" (org-name) ":"))))
+  (pre-white? (choices1 "#+" (bracket? ":" (org-name) ":"))))
 
 (defun org-element ()
   "Actually org-paragraph."
@@ -735,7 +735,7 @@
 
 (defun org-priority (priorities)
   (named-seq* "[#"
-              (<- priority (apply #'choices priorities))
+              (<- priority (apply #'choices1 priorities))
               "]"
               (string priority)))
 
@@ -764,7 +764,7 @@
       (org-stars nstars)
       (<- commentedp (opt? (pre-white1? (tag :commented (chook? t comment-keyword)))))
       (<- quotedp (opt? (pre-white1? (tag :quoted (chook? t quote-keyword)))))
-      (<- keyword (opt? (pre-white1? (tag :todo (apply #'choices keywords)))))
+      (<- keyword (opt? (pre-white1? (tag :todo (apply #'choices1 keywords)))))
       (<- priority (opt? (pre-white1? (tag :priority (org-priority priorities)))))
       (<- title (pre-white1? (tag :title (org-title))))
       (<- tags (opt? (pre-white1? (tag :tags (org-tags)))))
