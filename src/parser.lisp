@@ -605,15 +605,15 @@
 
 (defun org-entry (stars &optional (startup *org-default-startup*))
   (mdo
-    (<- headline (org-headline stars))
+    (<- headline (c? (org-headline stars)))
     (<- body
         (opt?
          (mdo
            (<- section  (opt-and-pre-newline?
-                         (org-section)))
+                         (c? (org-section))))
            (<- children (opt-and-pre-newline?
                          (find-sepby1-before-nonsep?
-                          (org-child-entry stars startup)
+                          (c? (org-child-entry stars startup))
                           (newline)
                           (choices
                            (seq-list*
@@ -647,14 +647,14 @@
    (mdo
      (<- content (find-sepby1-before-nonsep?
                   (choices
-                   (org-greater-element)
-                   (org-affiliated-keyword)
-                   (org-element))
+                   (c? (org-greater-element))
+                   (c? (org-affiliated-keyword))
+                   (c? (org-element)))
                   (newline)
-                  (choice1 (seq-list* (newline)
-                                      (choice1 "*"
-                                               (org-greater-end-signature)))
-                           (end?))))
+                  (c? (choice1 (seq-list* (newline)
+                                          (choices1 "*"
+                                                    (org-greater-end-signature)))
+                               (end?)))))
      (if-let ((filtered-content (remove "" content :test #'equal)))
        (result (list :section filtered-content))
        (zero)))))
@@ -668,9 +668,8 @@
                 (newline)
                 (choices
                  ;; (org-greater-element)
-                 (seq-list* (newline) (choices1 "*"
-                                                (org-greater-signature)
-                                                (end?)))
+                 (seq-list* (newline) (choice1 "*"
+                                               (org-greater-signature)))
                  (end?))))
      (rejoin +newline-string+ lines))
    (chook? "" (end?))))
