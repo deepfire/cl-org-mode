@@ -601,6 +601,9 @@
 (defun org-child-entry (stars startup &aux (odd (getf startup :odd)))
   (org-entry (+ stars (if odd 2 1)) startup))
 
+(defmethod parser-combinators::context-peek ((context parser-combinators::end-context))
+  nil)
+
 (defun org-entry (stars &optional (startup *org-default-startup*))
   (mdo
     (<- headline (c? (org-headline stars)))
