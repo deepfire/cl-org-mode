@@ -635,11 +635,12 @@
   (pre-white? (choice1 "#+" (bracket? ":" (org-name) ":"))))
 
 (defun org-greater-end-signature ()
-  (pre-white? (choice1 (seq-list* "#+END" (choice1 "_"
-                                                   (before* (opt? ":")
-                                                            (choice1 (end?)
-                                                                     (newline)))))
-                       ":END:")))
+  (pre-white? (choice1 (seq-list* (caseless "#+END")
+                                  (choice1 "_"
+                                           (before* (opt? ":")
+                                                    (choice1 (end?)
+                                                             (newline)))))
+                       (caseless ":END:"))))
 
 (defun org-section ()
   (choice1
@@ -850,7 +851,7 @@
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (<- name (pre-white? (bracket? ":" (except? (org-name) "END") ":")))
+    (<- name (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
     (newline)
     (<- contents (find-before* (item)
                                (seq-list*
