@@ -232,30 +232,28 @@
     (newline)
     x)))
 
-(defun find-sepby-before? (p sep stop)
-  (choices
-   (chook? nil stop)
-   (named-seq*
-     (<- head (except? p stop))
-     (<- tail (find-before* (mdo* sep (except? p stop))
-                            stop))
-     (cons head tail))))
-
 (defun find-sepby1-before? (p sep stop)
   (named-seq*
-    (<- head (except? p stop))
-    (<- tail (find-before* (mdo* sep (except? p stop))
-                           (mdo* sep stop)))
-    (cons head tail)))
+   (<- head p)
+   (<- tail (find-before* (mdo* sep p)
+                          (choice1
+                           (end?)
+                           (seq-list* sep (choice1 stop (end?))))))
+   (cons head tail)))
+
+(defun find-sepby-before? (p sep stop)
+  (choices1
+   (chook? nil (choice1 stop (end?)))
+   (find-sepby1-before? p sep stop)))
 
 (defun find-sepby1-before-nonsep? (p sep stop)
-  (mdo
-    (<- head p)
-    (hook? (curry #'cons head)
-           (choices
-            (chookahead? nil stop)
-            (find-before* (mdo* sep p)
-                          stop)))))
+  (named-seq*
+   (<- head p)
+   (<- tail (find-before* (mdo* sep p)
+                          (choice1
+                           (end?)
+                           (choice1 stop (end?)))))
+   (cons head tail)))
 
 (defun upto-end-of-line? (x)
   (mdo (<- xs (find-before? x (choice (newline)
