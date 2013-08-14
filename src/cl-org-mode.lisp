@@ -87,8 +87,8 @@ then stick it in the default node"
 
 (defun read-org-file (pathname)
   (let ((node (make-instance 'org-file :pathname pathname)))
-    (setf node (megaparser (alexandria:read-file-into-string pathname)))
-    node))
+    (alexandria:with-input-from-file (stream pathname) 
+      (read-parent-node node stream))))
 
 (defclass delimited-node (org-parent-node)
   ((opening-delimiter :initarg :opening-delimiter :accessor node.opening-delimiter :initform nil)
