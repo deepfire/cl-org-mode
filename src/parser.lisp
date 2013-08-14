@@ -644,15 +644,14 @@
   (choice1
    (chook? (list :section "") (end?))
    (mdo
-     (<- content (find-sepby1-before-nonsep?
+     (<- content (find-sepby1-before?
                   (choices
                    (c? (org-greater-element))
                    (c? (org-affiliated-keyword))
                    (c? (org-element)))
                   (newline)
-                  (c? (choice1 (seq-list* (newline)
-                                          (choices1 "*"
-                                                    (org-greater-end-signature)))
+                  (c? (choice1 (choices1 "*"
+                                         (org-greater-end-signature))
                                (end?)))))
      (if-let ((filtered-content (remove "" content :test #'equal)))
        (result (list :section filtered-content))
@@ -662,15 +661,13 @@
   "Actually org-paragraph."
   (choice
    (named-seq*
-     (<- lines (find-sepby1-before-nonsep?
-                (org-element-line)
-                (newline)
-                (choices
-                 ;; (org-greater-element)
-                 (seq-list* (newline) (choice1 "*"
-                                               (org-greater-signature)))
-                 (end?))))
-     (rejoin +newline-string+ lines))
+    (<- lines (find-sepby1-before-nonsep?
+               (c? (org-element-line))
+               (newline)
+               (c? (choices1
+                    "*"
+                    (org-greater-signature)))))
+    (rejoin +newline-string+ lines))
    (chook? "" (end?))))
 
 (defun org-element-line ()
