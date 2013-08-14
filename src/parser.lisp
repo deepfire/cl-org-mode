@@ -733,7 +733,9 @@
              (when trace
                (format t "---------------- #~D~%" n))
              (destructuring-bind (input expected) tc
-               (let ((output (parse-string* (org-entry 1) input)))
+               (let* ((cache  (make-string-position-cache input))
+                      (*position-cache* cache)
+                      (output (parse-string* (org-entry 1) input)))
                  (unless (equal output expected)
                    (when trace
                      (format t "-~%~S~%~S~%~S~%" n input output))
