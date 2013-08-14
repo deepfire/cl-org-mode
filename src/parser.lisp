@@ -722,8 +722,14 @@
             (:ENTRY (:TITLE "b")
                     (:SECTION
                      ("   b text
+")))))
+    ("* a
 
-")))))))
+** b
+"          (:ENTRY (:TITLE "a")
+            (:SECTION "
+")
+            (:ENTRY (:TITLE "b"))))))
 
 (defun test-org-entry (&optional trace)
   (values-list
