@@ -135,7 +135,7 @@
 
 (defun tree-getf (tree &rest keys)
   (if keys
-      (apply #'access (getf tree (first keys)) (rest keys))
+      (apply #'tree-getf (getf tree (first keys)) (rest keys))
       tree))
 
 (defun to-string (xs)
