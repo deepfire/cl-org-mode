@@ -255,8 +255,9 @@
   "Actually org-paragraph."
   (named-seq*
    (<- lines (find-before* (c? (org-element-line))
-                           (c? (choice1 "*"
-                                        (end?)))))
+                           (c? (choices1 "*"
+                                         (org-greater-signature)
+                                         (end?)))))
    (strconcat lines)))
 
 ;;;
@@ -272,7 +273,7 @@
                                       (<- ret (line-but-of-1+ #\[ #\]))
                                       "]"
                                       ret)))
-                 (opt? ":") " "
+                 (opt? ":")
                  (<- value    (line-without-eol))
                  (append (list :keyword key)
                          (when optional
