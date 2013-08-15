@@ -334,6 +334,14 @@
 
 ;;;
 ;;;  Drawer   http://orgmode.org/worg/dev/org-syntax.html#Drawers_and_Property_Drawers
+(defun org-property ()
+  (named-seq*
+   (spacetabs)
+   (<- name (bracket? ":" (org-name) ":"))
+   (<- value (opt? (pre-white1? (line-but-of))))
+   (spacetab) (eol)
+   (list :property name :value value)))
+
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
