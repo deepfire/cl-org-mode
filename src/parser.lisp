@@ -291,11 +291,11 @@
 
 ;;;
 ;;;  Section   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
-(defun org-section ()
+(defun org-section (allowed-greater-element)
   (mdo
     (<- content (find-before*
                  (choices1
-                  (c? (org-greater-element))
+                  (c? allowed-greater-element)
                   (c? (org-affiliated-keyword))
                   (c? (org-element)))
                  (c? (org-boundary))))
@@ -308,11 +308,15 @@
 ;;;  Greater element   http://orgmode.org/worg/dev/org-syntax.html#Greater_Elements
 ;;
 ;; part of the section->greater-element->section loop
-(defun org-greater-element ()
-  (choices1
+(defun org-greater-nondrawer-element ()
+  (choice1
    (org-greater-block)
-   (org-drawer)
    (org-dynamic-block)))
+
+(defun org-greater-element ()
+  (choice1
+   (org-greater-nondrawer-element)
+   (org-drawer)))
 
 ;;;
 ;;;  Greater blocks   http://orgmode.org/worg/dev/org-syntax.html#Greater_Blocks
@@ -322,8 +326,8 @@
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
     (<- parameters (opt? (pre-white1? (line-without-eol))))
-    (<- contents (org-section))
     (pre-white? (caseless "#+END_")) name (eol)
+    (<- contents (org-section (org-greater-element)))
     (result (list :block name
                   :parameters parameters
                   :contents contents))))
@@ -348,7 +352,7 @@
     (pre-white? (caseless "#+BEGIN:"))
     (<- name (pre-white1? (line-but-of #\Space)))
     (<- parameters (opt? (pre-white? (line-without-eol))))
-    (<- contents (org-section))
+    (<- contents (org-section (org-greater-element)))
     (pre-white? (seq-list* (caseless "#+END")
                            (before* (opt? ":") (seq-list*
                                                 (spacetabs)
@@ -414,7 +418,7 @@
     (<- body
         (opt?
          (mdo
-           (<- section  (c? (org-section)))
+           (<- section  (c? (org-section (org-greater-element))))
            (<- children (find-before*
                          (c? (org-child-entry stars startup))
                          (c? (choice1
@@ -579,7 +583,7 @@
              (setf valid (set-difference valid conflicted))
              (values all-opts valid unknown duplicate conflicted))))
     (named-seq*
-     (<- mix (opt? (org-section)))
+     (<- mix (opt? (org-section (org-greater-element))))
      (multiple-value-bind (raw-keywords section-content)
          (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
        (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
