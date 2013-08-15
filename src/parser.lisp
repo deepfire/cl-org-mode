@@ -152,12 +152,8 @@
 
 (define-constant +newline-string+ (coerce #(#\Newline) 'string) :test #'equal)
 
-(defun rejoin (x xs)
-  (apply #'concatenate 'string (intersperse x xs)))
-
-(defun rejoined-lines (x)
-  (hook? (curry #'rejoin +newline-string+)
-         (sepby? x (newline))))
+(defun strconcat (xs)
+  (apply #'concatenate 'string xs))
 
 ;;;
 ;;; Primitives
@@ -192,8 +188,21 @@
   (chook? +newline-string+
           (choices1 #\Newline
                     (seq-list* #\Return #\Newline)
-                    #\Linefeed
                     #\Return)))
+
+(defun eol ()
+  (choice1 (newline)
+           (end?)))
+
+(defun line-without-eol ()
+  (named-seq*
+   (<- chars (many* (line-constituent-but)))
+   (eol)
+   (coerce chars 'string)))
+
+(defun line-full ()
+  (hook? (lambda (x) (concatenate 'string x +newline-string+))
+         (line-without-eol)))
 
 (defun spacetabs ()
   (many? (spacetab)))
@@ -211,58 +220,8 @@
     (spacetabs)
     x))
 
-(defun pre-newline? (x &key retain-newline)
-  (named-seq*
-   (newline)
-   (<- ret x)
-   (if retain-newline
-       (concatenate 'string +newline-string+ ret)
-       ret)))
-
-(defun post-newline? (x)
-  (named-seq*
-    (<- ret x)
-    (newline)
-    ret))
-
-(defun opt-and-pre-newline? (x)
-  (opt?
-   (mdo*
-    (newline)
-    x)))
-
 (defun org-name ()
   (string-of-1+ (choices1 (alphanum?) #\_ #\-)))
-
-(defun find-sepby1-before? (p sep stop)
-  (named-seq*
-   (<- head p)
-   (<- tail (find-before* (mdo* sep p)
-                          (choice1
-                           (end?)
-                           (seq-list* sep (choice1 stop (end?))))))
-   (cons head tail)))
-
-(defun find-sepby-before? (p sep stop)
-  (choices1
-   (chook? nil (choice1 stop (end?)))
-   (find-sepby1-before? p sep stop)))
-
-(defun find-sepby1-before-nonsep? (p sep stop)
-  (named-seq*
-   (<- head p)
-   (<- tail (find-before* (mdo* sep p)
-                          (choice1
-                           (end?)
-                           (choice1 stop (end?)))))
-   (cons head tail)))
-
-(defun upto-end-of-line? (x)
-  (mdo (<- xs (find-before? x (choice (newline)
-                                      (end?))))
-       (if (not (endp (rest xs)))
-           (zero)
-           (result (first xs)))))
 
 (defun tag (tag x)
   (hook? (lambda (x)
@@ -280,34 +239,25 @@
   (pre-white? (choice1 (seq-list* (caseless "#+END")
                                   (choice1 "_"
                                            (before* (opt? ":")
-                                                    (choice1 (end?)
-                                                             (newline)))))
+                                                    (eol))))
                        (caseless ":END:"))))
 
 (defun org-element-line ()
-  (choices
-   (chookahead? "" (end?))
-   (chookahead? "" (newline))
-   (except? (mdo
+  (choice1
+   (newline)
+   (except? (named-seq*
               (<- first-char (line-constituent-but #\*))
-              (<- rest       (find-before* (line-constituent-but)
-                                           (choice1 (newline)
-                                                    (end?))))
-              (result (concatenate 'string (list first-char) rest)))
+              (<- line       (line-full))
+              (concatenate 'string (list first-char) line))
             (org-greater-signature))))
 
 (defun org-element ()
   "Actually org-paragraph."
-  (choice
-   (named-seq*
-    (<- lines (find-sepby1-before-nonsep?
-               (c? (org-element-line))
-               (newline)
-               (c? (choices1
-                    "*"
-                    (org-greater-signature)))))
-    (rejoin +newline-string+ lines))
-   (chook? "" (end?))))
+  (named-seq*
+   (<- lines (find-before* (c? (org-element-line))
+                           (c? (choice1 "*"
+                                        (end?)))))
+   (strconcat lines)))
 
 ;;;
 ;;;  Affiliated keyword   http://orgmode.org/worg/dev/org-syntax.html#Affiliated_keywords
@@ -323,7 +273,7 @@
                                       "]"
                                       ret)))
                  (opt? ":") " "
-                 (<- value    (line-but-of))
+                 (<- value    (line-without-eol))
                  (append (list :keyword key)
                          (when optional
                            (list :optional optional))
@@ -331,35 +281,33 @@
      (named-seq* (caseless "ATTR_")
                  (<- backend (org-name))
                  ": "
-                 (<- value   (line-but-of))
+                 (<- value   (line-without-eol))
                  (list :attribute backend
                        :value value)))))
 
 ;;;
 ;;;  Section   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
 (defun org-section ()
-  (choice1
-   (chook? (list :section "") (end?))
-   (mdo
-     (<- content (find-sepby1-before?
-                  (choices
-                   (c? (org-greater-element))
-                   (c? (org-affiliated-keyword))
-                   (c? (org-element)))
-                  (newline)
-                  (c? (choice1 (choices1 "*"
-                                         (org-greater-end-signature))
+  (mdo
+    (<- content (find-before*
+                 (choices1
+                  (c? (org-greater-element))
+                  (c? (org-affiliated-keyword))
+                  (c? (org-element)))
+                 (c? (choices1 "*"
+                               (org-greater-end-signature)
                                (end?)))))
-     (if-let ((filtered-content (remove "" content :test #'equal)))
-       (result (list :section filtered-content))
-       (zero)))))
+    (progn
+      ;; (format t "section content: ~S~%" content)
+      (result (when-let ((filtered-content (remove "" content :test #'equal)))
+                (list :section filtered-content))))))
 
 ;;;
 ;;;  Greater element   http://orgmode.org/worg/dev/org-syntax.html#Greater_Elements
 ;;
 ;; part of the section->greater-element->section loop
 (defun org-greater-element ()
-  (choices
+  (choices1
    (org-greater-block)
    (org-drawer)
    (org-dynamic-block)))
@@ -371,12 +319,9 @@
   (mdo
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
-    (<- parameters (opt? (pre-white1? (line-but-of))))
-    (newline)
+    (<- parameters (opt? (pre-white1? (line-without-eol))))
     (<- contents (org-section))
-    (newline)
-    (pre-white? (caseless "#+END_"))
-    name
+    (pre-white? (caseless "#+END_")) name (eol)
     (result (list :block name
                   :parameters parameters
                   :contents contents))))
@@ -387,11 +332,10 @@
   "Deviation: does not parse own contents."
   (mdo
     (<- name (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
-    (newline)
+    (spacetabs) (newline)
     (<- contents (find-before* (item)
-                               (seq-list*
-                                (pre-white? (caseless ":END:")) (newline))))
-    (pre-white? (caseless ":END:"))
+                               (caseless ":END:")))
+    (pre-white? (caseless ":END:")) (spacetabs) (eol)
     (result (list :drawer name
                   :contents (to-string contents)))))
 
@@ -401,24 +345,18 @@
   (mdo
     (pre-white? (caseless "#+BEGIN:"))
     (<- name (pre-white1? (line-but-of #\Space)))
-    (<- parameters (opt? (pre-white? (line-but-of))))
-    (newline)
+    (<- parameters (opt? (pre-white? (line-without-eol))))
     (<- contents (org-section))
-    (newline)
     (pre-white? (seq-list* (caseless "#+END")
-                           (before* (opt? ":") (choice1 (end?) (newline)))))
+                           (before* (opt? ":") (seq-list*
+                                                (spacetabs)
+                                                (eol)))))
     (result (list :dynamic-block name
                   :parameters parameters
                   :contents contents))))
 
 ;;;
 ;;;  Headline   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
-(defun org-title ()
-  (hook? #'to-string
-         (find-before* (line-constituent-but)
-                       (seq-list* (opt? (pre-white1? (org-tags)))
-                                  (choice1 (newline) (end?))))))
-
 (defun org-priority (priorities)
   (named-seq* "[#"
               (<- priority (apply #'choices1 priorities))
@@ -433,6 +371,12 @@
               (<- tags (sepby? (org-tag-name) #\:))
               ":"
               tags))
+
+(defun org-title ()
+  (hook? #'to-string
+         (find-before* (line-constituent-but)
+                       (seq-list* (opt? (pre-white1? (org-tags)))
+                                  (eol)))))
 
 (defun org-stars (n)
   (seq-list* (times? #\* n)
@@ -457,7 +401,7 @@
       (<- priority (opt? (pre-white1? (tag :priority (org-priority priorities)))))
       (<- title (pre-white1? (tag :title (org-title))))
       (<- tags (opt? (pre-white1? (tag :tags (org-tags)))))
-      (spacetabs)
+      (spacetabs) (eol)
       (result (append commentedp quotedp keyword priority title tags)))))
 
 ;;;
@@ -468,22 +412,15 @@
     (<- body
         (opt?
          (mdo
-           (<- section  (opt-and-pre-newline?
-                         (c? (org-section))))
-           (<- children (opt-and-pre-newline?
-                         (find-sepby1-before-nonsep?
-                          (c? (org-child-entry stars startup))
-                          (newline)
-                          (choices
-                           (seq-list*
-                            (newline)
-                            (choice (end?)
-                                    (org-closing-headline-variants stars startup)))
-                           (end?)))))
-           (result (progn
-                     (append (when section
-                               (list section))
-                             children))))))
+           (<- section  (c? (org-section)))
+           (<- children (find-before*
+                         (c? (org-child-entry stars startup))
+                         (c? (choice1
+                              (org-closing-headline-variants stars startup)
+                              (end?)))))
+           (result (append (when section
+                             (list section))
+                           children)))))
     (result
      (append (list :entry headline)
              body))))
@@ -499,23 +436,25 @@
     ("* a" (:ENTRY (:TITLE "a")))
     ;; 1
     ("* a
-"          (:ENTRY (:TITLE "a") (:SECTION "")))
+"          (:ENTRY (:TITLE "a")))
     ;; 2
     ("* a
    a text" (:ENTRY (:TITLE "a")
-            (:SECTION ("   a text"))))
+            (:SECTION ("   a text
+"))))
     ;; 3
     ("* a
 ** b
 "          (:ENTRY (:TITLE "a")
-            (:ENTRY (:TITLE "b") (:SECTION ""))))
+            (:ENTRY (:TITLE "b"))))
     ;; 4
     ("* a
    a text
 ** b
 "          (:ENTRY (:TITLE "a")
-            (:SECTION ("   a text"))
-            (:ENTRY (:TITLE "b") (:SECTION ""))))
+            (:SECTION ("   a text
+"))
+            (:ENTRY (:TITLE "b"))))
     ;; 5
     ("* a
 
@@ -527,20 +466,23 @@
 "          (:ENTRY (:TITLE "a")
             (:SECTION ("
   a text
+
 "))
             (:ENTRY (:TITLE "b")
                     (:SECTION
                      ("   b text
+
 ")))))
     ("* a
 
 ** b
 "          (:ENTRY (:TITLE "a")
-            (:SECTION "
-")
+            (:SECTION ("
+"))
             (:ENTRY (:TITLE "b"))))))
 
-(defun test-org-entry (&optional trace)
+(defun test-org-entry (&optional (trace t) (debug t)
+                       &aux (*debug-mode* debug))
   (values-list
    (mapcan (lambda (tc n)
              (when trace
@@ -665,21 +607,12 @@
                ,@(when section-content
                        (list (list :section section-content)))))))))))
 
-(defun header-nothing-p (x)
-  (and (endp (cdr x))
-       (endp (cadar x))))
-
 ;;;
 ;;; Whole thing
 (defun org-parser ()
   (mdo
     (<- initial (org-header))
-    (if (header-nothing-p initial)
-        (context?)
-        (newline))
-    (<- entries    (sepby? (org-top-entry (tree-getf (first initial) :header :startup))
-                           (newline)))
-    (opt? (newline))
+    (<- entries    (many* (org-top-entry (tree-getf (first initial) :header :startup))))
     (result (cons :org
                   (append initial entries)))))
 
