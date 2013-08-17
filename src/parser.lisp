@@ -337,21 +337,27 @@
 (defun org-property ()
   (named-seq*
    (spacetabs)
-   (<- name (bracket? ":" (org-name) ":"))
+   (<- name (bracket? ":" (except? (org-name) "END") ":"))
    (<- value (opt? (pre-white1? (line-but-of))))
-   (spacetab) (eol)
+   (spacetabs) (eol)
    (list :property name :value value)))
 
 (defun org-drawer ()
   "Deviation: does not parse own contents."
   (mdo
-    (<- name (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
+    (<- name    (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
     (spacetabs) (newline)
-    (<- contents (find-before* (item)
-                               (caseless ":END:")))
-    (pre-white? (caseless ":END:")) (spacetabs) (eol)
+    (<- contents (cond ((string-equal name "PROPERTIES")
+                        (many* (org-property)))
+                       (t
+                        (org-section (org-greater-nondrawer-element)))))
+    (choices1
+     (seq-list* (pre-white? (caseless ":END:")) (spacetabs) (eol))
+     (chookahead? t (choices1 "*"
+                              (seq-list* (spacetabs) "#+")
+                              (end?))))
     (result (list :drawer name
-                  :contents (to-string contents)))))
+                  :contents contents))))
 
 ;;;
 ;;;  Dynamic block   http://orgmode.org/worg/dev/org-syntax.html#Dynamic_Blocks
