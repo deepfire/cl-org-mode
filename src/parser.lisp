@@ -242,9 +242,13 @@
                                                     (eol))))
                        (caseless ":END:"))))
 
-(defun org-boundary ()
+(defun org-boundary (&key for)
   (choices1 "*"
-            (org-greater-end-signature)
+            (ecase for
+              (:element
+               (org-greater-signature))
+              (:section
+               (org-greater-end-signature)))
             (end?)))
 
 (defun org-element-line ()
@@ -260,7 +264,7 @@
   "Actually org-paragraph."
   (named-seq*
    (<- lines (find-before* (c? (org-element-line))
-                           (c? (org-boundary))))
+                           (c? (org-boundary :for :element))))
    (strconcat lines)))
 
 ;;;
@@ -298,7 +302,7 @@
                   (c? allowed-greater-element)
                   (c? (org-affiliated-keyword))
                   (c? (org-element)))
-                 (c? (org-boundary))))
+                 (c? (org-boundary :for :section))))
     (progn
       ;; (format t "section content: ~S~%" content)
       (result (when-let ((filtered-content (remove "" content :test #'equal)))
