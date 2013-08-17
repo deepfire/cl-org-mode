@@ -167,10 +167,10 @@
   (char-not-bag (list* #\Linefeed #\Newline #\Return except)))
 
 (defun string-of (p)
-  (hook? #'to-string (many? p)))
+  (hook? #'to-string (many* p)))
 
 (defun string-of-1+ (p)
-  (hook? #'to-string (many1? p)))
+  (hook? #'to-string (many1* p)))
 
 (defun line-but-of (&rest except)
   (string-of (apply #'line-constituent-but except)))
@@ -205,10 +205,10 @@
          (line-without-eol)))
 
 (defun spacetabs ()
-  (many? (spacetab)))
+  (many* (spacetab)))
 
 (defun spacetabs1 ()
-  (many1? (spacetab)))
+  (many1* (spacetab)))
 
 (defun pre-white1? (x)
   (mdo*
@@ -393,7 +393,7 @@
 
 (defun org-tags ()
   (named-seq* ":"
-              (<- tags (sepby? (org-tag-name) #\:))
+              (<- tags (sepby* (org-tag-name) #\:))
               ":"
               tags))
 
