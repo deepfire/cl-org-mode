@@ -350,7 +350,7 @@
   "Deviation: does not parse own contents."
   (mdo
     (<- name    (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
-    (spacetabs) (newline)
+    (opt? (line-but-of)) (eol)
     (<- contents (cond ((string-equal name "PROPERTIES")
                         (many* (org-property)))
                        (t
