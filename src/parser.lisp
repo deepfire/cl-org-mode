@@ -152,31 +152,34 @@
 ;;;
 ;;; Primitives
 (defun char-bag (bag)
-  (sat (lambda (x) (member x bag :test #'char=))))
+  (sat (lambda (x) (find x bag :test #'char=))))
 
 (defun char-not-bag (bag)
-  (sat (lambda (x) (not (member x bag :test #'char=)))))
+  (sat (lambda (x) (not (find x bag :test #'char=)))))
 
-(defun line-constituent-but (&rest except)
+(defun line-constituent-but (except)
   (char-not-bag (list* #\Linefeed #\Newline #\Return except)))
 
+(defun line-constituent-but* (&rest except)
+  (line-constituent-but except))
+
 (defun string-of (p)
-  (hook? #'to-string (many* p)))
+  (between* p 0 nil 'string))
 
 (defun string-of-1+ (p)
-  (hook? #'to-string (many1* p)))
+  (between* p 1 nil 'string))
 
 (defun line-but-of (&rest except)
-  (string-of (apply #'line-constituent-but except)))
+  (string-of (line-constituent-but except)))
 
 (defun line-but-of-1+ (&rest except)
-  (string-of-1+ (apply #'line-constituent-but except)))
+  (string-of-1+ (line-constituent-but except)))
 
 (defun caseless (x)
   (choices1 (string-downcase x) (string-upcase x)))
 
 (defun spacetab ()
-  (choice #\Space #\Tab))
+  (choice1 #\Space #\Tab))
 
 (defun newline ()
   (chook? +newline-string+
@@ -190,9 +193,9 @@
 
 (defun line-without-eol ()
   (named-seq*
-   (<- chars (many* (line-constituent-but)))
+   (<- string (line-but-of))
    (eol)
-   (coerce chars 'string)))
+   string))
 
 (defun line-full ()
   (hook? (lambda (x) (concatenate 'string x +newline-string+))
@@ -247,12 +250,12 @@
 
 (defun org-element-line ()
   (choice1
-   (newline)
    (except? (named-seq*
-              (<- first-char (line-constituent-but #\*))
-              (<- line       (line-full))
-              (concatenate 'string (list first-char) line))
-            (org-greater-signature))))
+             (<- first-char (line-constituent-but* #\*))
+             (<- line       (line-full))
+             (concatenate 'string (list first-char) line))
+            (org-greater-signature))
+   (eol)))
 
 (defun org-element ()
   "Actually org-paragraph."
@@ -393,7 +396,7 @@
 
 (defun org-title ()
   (hook? #'to-string
-         (find-before* (line-constituent-but)
+         (find-before* (line-constituent-but nil)
                        (seq-list* (opt? (pre-white1? (org-tags)))
                                   (eol)))))
 
