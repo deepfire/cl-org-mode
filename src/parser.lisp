@@ -321,8 +321,8 @@
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
     (<- parameters (opt? (pre-white1? (line-without-eol))))
-    (<- contents (org-section (org-greater-element)))
-    (pre-white? (caseless "#+END_")) name (opt? (seq-list* (spacetabs1) (line-but-of))) (eol)
+    (<- contents (c? (org-section (org-greater-element))))
+    (pre-white? (caseless "#+END_")) (caseless name) (opt? (seq-list* (spacetabs1) (line-but-of))) (eol)
     (result (list :block name
                   :parameters parameters
                   :contents contents))))
