@@ -146,6 +146,9 @@
 (defun strconcat (xs)
   (apply #'concatenate 'string xs))
 
+(defun strconcat* (&rest xs)
+  (strconcat xs))
+
 ;;;
 ;;; Primitives
 (defun char-bag (bag)
