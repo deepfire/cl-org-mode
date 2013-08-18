@@ -697,6 +697,7 @@
       (let ((fmt (format nil "; at ~~A, line ~~D, col ~~D:~~%~~A~~%~~~D@T^~~%" col)))
         (format t fmt place (1+ lineno) (1+ col) ctx))))
   (defun try-org-file (filename &key profile
+  (defun try-org-file (filename &key profile (parser #'org-parser)
                        &aux
                          (string (alexandria:read-file-into-string filename))
                          (cache  (make-string-position-cache string))
@@ -719,7 +720,8 @@
                                    string posn cache)))
       (declare (ignorable #'print-hit))
       (format t ";;;~%;;;~%;;; trying: ~S~%" filename)
-      (multiple-value-bind (result vector-context successp front seen-positions) (org-parse string)
+      (multiple-value-bind (result vector-context successp front seen-positions)
+          (parse-string* (funcall parser) string)
         (declare (ignore vector-context))
         (if (and successp (null front))
             (let ((top-hits (top-hits seen-positions 25))
