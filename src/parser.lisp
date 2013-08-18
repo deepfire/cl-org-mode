@@ -202,10 +202,10 @@
          (line-without-eol)))
 
 (defun spacetabs ()
-  (many* (spacetab)))
+  (between* (spacetab) nil nil 'string))
 
 (defun spacetabs1 ()
-  (many1* (spacetab)))
+  (between* (spacetab) 1 nil 'string))
 
 (defun pre-white1? (x)
   (mdo*
