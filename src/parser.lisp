@@ -707,10 +707,15 @@
   (defun org-complexity (text &optional (parser (if (and (plusp (length text))
                                                          (starts-with #\* text))
                                                     (curry #'org-entry 1)
-                                                    #'org-element)))
+                                                    #'org-element))
+                         &aux
+                           (*position-cache* (make-string-position-cache text)))
     (multiple-value-bind (result vector-context successp front seen-positions)
         (parse-string* (funcall parser) text)
-      (declare (ignore result vector-context front))
+      (declare (ignorable result vector-context front))
+      #+nil
+      (format t "parser ~S, text:~%~S~%result ~S, vector-context ~S, successp ~S, front ~S, seen-positions ~S~%"
+              parser text result vector-context successp front seen-positions)
       (unless successp
         (error "Failed to parse (using ~S):~%~A"
                parser (format nil "--- 8< ---~%~S~%--- >8 ---~%" text)))
