@@ -696,7 +696,6 @@
       (declare (ignore lposn rposn line))
       (let ((fmt (format nil "; at ~~A, line ~~D, col ~~D:~~%~~A~~%~~~D@T^~~%" col)))
         (format t fmt place (1+ lineno) (1+ col) ctx))))
-  (defun try-org-file (filename &key profile
   (defun try-org-file (filename &key profile (parser #'org-parser)
                        &aux
                          (string (alexandria:read-file-into-string filename))
@@ -752,14 +751,13 @@
   (defmacro with-maybe-time ((time) &body body)
     `(maybe-time ,time (lambda () ,@body)))
   (load "~/org-file-index.lisp")
-  (defun test (&key profile
+  (defun test (&key profile (total (length *org-files*))
                &aux
                  (filelist *org-files*)
-                 (total (length filelist))
                  (total-contexts 0)
                  (succeeded 0))
     (with-maybe-time (profile)
-      (dolist (f filelist)
+      (dolist (f (subseq filelist 0 total))
         (with-maybe-time (profile)
           (multiple-value-bind (success ncontexts) (try-org-file f :profile profile)
             (when ncontexts
