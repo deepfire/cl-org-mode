@@ -91,17 +91,8 @@
    p
    (zero)))
 
-(defun format? (fmt &rest args)
-  (hook? (lambda (x) (declare (ignore x)) (apply #'format t fmt args)) (context?)))
-
 (defmacro ? (x)
-  (with-gensyms (res)
-    `(named-seq*
-      (format? "~S ?~%" ',x)
-      (<- ,res ,x)
-      (progn
-        (format t "~S ok - ~S~%" ',x ,res)
-        ,res))))
+  `(check? ,x))
 
 (defun desc-posn? (name)
   (with-posn-info? (char line col)
