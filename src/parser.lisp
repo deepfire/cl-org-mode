@@ -259,10 +259,12 @@
 
 (defun org-element ()
   "Actually org-paragraph."
-  (named-seq*
-   (<- lines (find-before* (c? (org-element-line))
+  (mdo
+    (<- lines (find-before* (c? (org-element-line))
                            (c? (org-boundary :for :element))))
-   (strconcat lines)))
+   (if lines
+       (result (strconcat lines))
+       (zero))))
 
 ;;;
 ;;;  Affiliated keyword   http://orgmode.org/worg/dev/org-syntax.html#Affiliated_keywords
@@ -296,9 +298,9 @@
   (mdo
     (<- content (find-before*
                  (choices1
+                  (c? (org-element))
                   (c? allowed-greater-element)
-                  (c? (org-affiliated-keyword))
-                  (c? (org-element)))
+                  (c? (org-affiliated-keyword)))
                  (c? (org-boundary :for :section))))
     (progn
       ;; (format t "section content: ~S~%" content)
@@ -721,11 +723,11 @@
                parser (format nil "--- 8< ---~%~S~%--- >8 ---~%" text)))
       (apply #'+ (hash-table-values seen-positions))))
   (defparameter *overhead-measured-parsers*
-    `(("element-line" nil ,#'org-element-line)
-      ("element"      nil ,#'org-element)
-      ("section"      nil ,(curry #'org-section (org-greater-element)))
-      ("entry"        t   ,(curry #'org-entry 1))
-      ("org"          t   ,#'org-parser)))
+    `(("element-line" nil nil ,#'org-element-line)
+      ("element"      nil nil ,#'org-element)
+      ("section"      nil t   ,(curry #'org-section (org-greater-element)))
+      ("entry"        t   t   ,(curry #'org-entry 1))
+      ("org"          t   t   ,#'org-parser)))
   (defun parser-context-overheads (&key
                                      debug
                                      (depth-range 5) (depth-start 0)
@@ -754,14 +756,18 @@
                                        (when trailing-newline-p
                                          (list +newline-string+)))))))))
       (values-list (map-product (lambda (parser-spec depth)
-                                  (destructuring-bind (name entry-capable-p parser) parser-spec
+                                  (destructuring-bind (name entry-capable-p empty-capable-p parser)
+                                      parser-spec
                                     (when (if (zerop depth)
                                               (not entry-capable-p)
                                               entry-capable-p)
                                       (let* ((seq (iter (for text-length below text-length-range)
-                                                        (collect (org-complexity
-                                                                  (generate-overhead-org depth text-length)
-                                                                  parser))))
+                                                        (collect
+                                                            (when (or (plusp text-length)
+                                                                      empty-capable-p)
+                                                              (org-complexity
+                                                               (generate-overhead-org depth text-length)
+                                                               parser)))))
                                              (tail (last seq 2))
                                              (rate (- (second tail) (first tail))))
                                         (append (list name) seq
