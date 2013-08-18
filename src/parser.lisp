@@ -699,6 +699,61 @@
       (declare (ignore lposn rposn line))
       (let ((fmt (format nil "; at ~~A, line ~~D, col ~~D:~~%~~A~~%~~~D@T^~~%" col)))
         (format t fmt place (1+ lineno) (1+ col) ctx))))
+  (defun org-complexity (text &optional (parser (if (and (plusp (length text))
+                                                         (starts-with #\* text))
+                                                    (curry #'org-entry 1)
+                                                    #'org-element)))
+    (multiple-value-bind (result vector-context successp front seen-positions)
+        (parse-string* (funcall parser) text)
+      (declare (ignore result vector-context front))
+      (unless successp
+        (error "Failed to parse (using ~S):~%~A"
+               parser (format nil "--- 8< ---~%~S~%--- >8 ---~%" text)))
+      (apply #'+ (hash-table-values seen-positions))))
+  (defparameter *overhead-measured-parsers*
+    `(("element-line" nil ,#'org-element-line)
+      ("element"      nil ,#'org-element)
+      ("section"      nil ,(curry #'org-section (org-greater-element)))
+      ("entry"        t   ,(curry #'org-entry 1))
+      ("org"          t   ,#'org-parser)))
+  (defun parser-context-overheads (&key
+                                     (depth-range 5) (depth-start 0)
+                                     (text-length-range 15)
+                                     (parsers *overhead-measured-parsers*)
+                                     text-varies-spacely
+                                     trailing-newline-p)
+    (labels ((generate-overhead-org (depth text-length)
+               (iter (for i below (1+ depth))
+                     (when (plusp i)
+                       (collecting (strconcat* (make-string i :initial-element #\*)
+                                               " "
+                                               (string (code-char (+ i (1- (char-code #\a)))))
+                                               +newline-string+)
+                                   into lines))
+                     (finally
+                      (return (strconcat
+                               (append lines
+                                       (list (when (plusp text-length)
+                                               (strconcat*
+                                                (make-string (1- text-length)
+                                                             :initial-element
+                                                             (if text-varies-spacely
+                                                                 #\Space
+                                                                 #\x))
+                                                "x")))
+                                       (when trailing-newline-p
+                                         (list +newline-string+)))))))))
+      (values-list (map-product (lambda (parser-spec depth)
+                                  (destructuring-bind (name entry-capable-p parser) parser-spec
+                                    (when (if (zerop depth)
+                                              (not entry-capable-p)
+                                              entry-capable-p)
+                                      (cons name
+                                            (iter (for text-length below text-length-range)
+                                                  (collect (org-complexity
+                                                            (generate-overhead-org depth text-length)
+                                                            parser)))))))
+                                parsers (iota depth-range :start depth-start)))))
   (defun try-org-file (filename &key profile (parser #'org-parser)
                        &aux
                          (string (alexandria:read-file-into-string filename))
