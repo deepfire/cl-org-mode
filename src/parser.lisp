@@ -727,11 +727,14 @@
       ("entry"        t   ,(curry #'org-entry 1))
       ("org"          t   ,#'org-parser)))
   (defun parser-context-overheads (&key
+                                     debug
                                      (depth-range 5) (depth-start 0)
                                      (text-length-range 15)
                                      (parsers *overhead-measured-parsers*)
-                                     text-varies-spacely
-                                     trailing-newline-p)
+                                     (text-meat-char #\x)
+                                     trailing-newline-p
+                                   &aux
+                                     (*debug-mode* debug))
     (labels ((generate-overhead-org (depth text-length)
                (iter (for i below (1+ depth))
                      (when (plusp i)
@@ -746,10 +749,7 @@
                                        (list (when (plusp text-length)
                                                (strconcat*
                                                 (make-string (1- text-length)
-                                                             :initial-element
-                                                             (if text-varies-spacely
-                                                                 #\Space
-                                                                 #\x))
+                                                             :initial-element text-meat-char)
                                                 "x")))
                                        (when trailing-newline-p
                                          (list +newline-string+)))))))))
@@ -758,11 +758,14 @@
                                     (when (if (zerop depth)
                                               (not entry-capable-p)
                                               entry-capable-p)
-                                      (cons name
-                                            (iter (for text-length below text-length-range)
-                                                  (collect (org-complexity
-                                                            (generate-overhead-org depth text-length)
-                                                            parser)))))))
+                                      (let* ((seq (iter (for text-length below text-length-range)
+                                                        (collect (org-complexity
+                                                                  (generate-overhead-org depth text-length)
+                                                                  parser))))
+                                             (tail (last seq 2))
+                                             (rate (- (second tail) (first tail))))
+                                        (append (list name) seq
+                                                (list (list :char-cost rate)))))))
                                 parsers (iota depth-range :start depth-start)))))
   (defun try-org-file (filename &key profile (parser #'org-parser)
                        &aux
