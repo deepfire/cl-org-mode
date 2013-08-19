@@ -324,8 +324,8 @@
   (mdo
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
-    (<- contents (c? (org-section (org-greater-element))))
     (<- parameters (opt* (pre-white1? (line-without-eol))))
+    (<- contents (c? (delayed? (org-section (org-greater-element)))))
     (pre-white? (caseless "#+END_")) (caseless name) (opt* (seq-list* (spacetabs1) (line-but-of))) (eol)
     (result (list :block name
                   :parameters parameters
@@ -349,7 +349,7 @@
     (<- contents (cond ((string-equal name "PROPERTIES")
                         (many* (org-property)))
                        (t
-                        (org-section (org-greater-nondrawer-element)))))
+                        (delayed? (org-section (org-greater-nondrawer-element))))))
     (choices1
      (seq-list* (pre-white? (caseless ":END:")) (spacetabs) (eol))
      (chookahead? t (choices1 "*"
@@ -364,8 +364,8 @@
   (mdo
     (pre-white? (caseless "#+BEGIN:"))
     (<- name (pre-white1? (line-but-of #\Space)))
-    (<- contents (org-section (org-greater-element)))
     (<- parameters (opt* (pre-white? (line-without-eol))))
+    (<- contents (delayed? (org-section (org-greater-element))))
     (pre-white? (seq-list* (caseless "#+END")
                            (before* (opt* ":")
                                     (seq-list* (opt* (seq-list* (spacetabs1)
@@ -434,7 +434,7 @@
   (named-seq*
    (<- headline (c? (org-headline stars)))
    (<- body     (c? (named-seq*
-                     (<- section  (org-section (org-greater-element)))
+                     (<- section  (delayed? (org-section (org-greater-element))))
                      (<- children (delayed? (many* (org-child-entry stars startup))))
                      (append (when section
                                (list section))
