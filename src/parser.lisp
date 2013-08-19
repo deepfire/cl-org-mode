@@ -261,7 +261,7 @@
   "Actually org-paragraph."
   (mdo
     (<- lines (find-before* (c? (org-element-line))
-                           (c? (org-boundary :for :element))))
+                            (c? (org-boundary :for :element))))
    (if lines
        (result (strconcat lines))
        (zero))))
@@ -400,14 +400,6 @@
   (seq-list* (times? #\* n)
              (chookahead? t " ")))
 
-(defun org-closing-headline-variants (current startup)
-  (let ((variants (loop :for x :downfrom current :to 1 :by (if (getf startup :odd) 2 1)
-                     :collect x)))
-    (apply #'choices1 (mapcar (lambda (n)
-                                (seq-list* (org-stars n)
-                                           " "))
-                              variants))))
-
 (defun org-headline (nstars &optional (startup *org-default-startup*))
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
                        &allow-other-keys) startup
@@ -424,24 +416,25 @@
 
 ;;;
 ;;;  Entry   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
+(defun org-closing-headline-variants (current startup)
+  (let ((variants (loop :for x :downfrom current :to 1 :by (if (getf startup :odd) 2 1)
+                     :collect x)))
+    (apply #'choices1 (mapcar (lambda (n)
+                                (seq-list* (org-stars n)
+                                           " "))
+                              variants))))
+
 (defun org-entry (stars &optional (startup *org-default-startup*))
-  (mdo
-    (<- headline (c? (org-headline stars)))
-    (<- body
-        (opt?
-         (mdo
-           (<- section  (c? (org-section (org-greater-element))))
-           (<- children (find-before*
-                         (c? (org-child-entry stars startup))
-                         (c? (choice1
-                              (org-closing-headline-variants stars startup)
-                              (end?)))))
-           (result (append (when section
-                             (list section))
-                           children)))))
-    (result
-     (append (list :entry headline)
-             body))))
+  (named-seq*
+   (<- headline (c? (org-headline stars)))
+   (<- body     (c? (named-seq*
+                     (<- section  (org-section (org-greater-element)))
+                     (<- children (delayed? (many* (org-child-entry stars startup))))
+                     (append (when section
+                               (list section))
+                             children))))
+   (append (list :entry headline)
+           body)))
 
 (defun org-top-entry (startup)
   (org-entry 1 (merge-startup startup *org-default-startup*)))
