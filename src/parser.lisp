@@ -270,27 +270,23 @@
 ;;;  Affiliated keyword   http://orgmode.org/worg/dev/org-syntax.html#Affiliated_keywords
 (defun org-affiliated-keyword ()
   "Deviation: allows optionals for keys other than CAPTION and RESULTS."
-  (mdo
-    (pre-white? "#+")
-    (choices
-     (named-seq* (<- key      (org-name))
-                 (<- optional (opt? (named-seq*
-                                      "["
-                                      (<- ret (line-but-of-1+ #\[ #\]))
-                                      "]"
-                                      ret)))
-                 (opt? ":")
-                 (<- value    (line-without-eol))
-                 (append (list :keyword key)
-                         (when optional
-                           (list :optional optional))
-                         (list :value value)))
-     (named-seq* (caseless "ATTR_")
-                 (<- backend (org-name))
-                 ": "
-                 (<- value   (line-without-eol))
-                 (list :attribute backend
-                       :value value)))))
+  (named-seq* "#+"
+              (<- name      (except? (org-name) (seq-list* (caseless "END")
+                                                           (choices1 " " "_" ":"))))
+              (<- optional (opt? (named-seq*
+                                  "["
+                                  (<- ret (line-but-of-1+ #\[ #\]))
+                                  "]"
+                                  ret)))
+              (opt? ":") (opt? " ")
+              (<- value    (line-without-eol))
+              (let ((attributep (starts-with-subseq "ATTR_" name)))
+                (append (if attributep
+                            (list :attribute (subseq name 5))
+                            (list :keyword name))
+                        (when optional
+                          (list :optional optional))
+                        (list :value value)))))
 
 ;;;
 ;;;  Section   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
