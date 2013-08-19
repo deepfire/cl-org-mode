@@ -114,7 +114,7 @@
          (format t "~S ? (next ~S, line:col ~D:~D)~%" mark char line col))
        (<- res (funcall fn))
        (progn
-         (format t "~S ok~[~; - ~S~]~%" mark *debug-print-result* res)
+         (format t "~S ok~:[~; - ~S~]~%" mark *debug-print-result* res)
          res))
       (funcall fn)))
 
