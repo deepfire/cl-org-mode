@@ -291,17 +291,15 @@
 ;;;
 ;;;  Section   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
 (defun org-section (allowed-greater-element)
-  (mdo
-    (<- content (find-before*
-                 (choices1
-                  (c? (org-element))
-                  (c? allowed-greater-element)
-                  (c? (org-affiliated-keyword)))
-                 (c? (org-boundary :for :section))))
-    (progn
-      ;; (format t "section content: ~S~%" content)
-      (result (when-let ((filtered-content (remove "" content :test #'equal)))
-                (list :section filtered-content))))))
+  (named-seq*
+   (<- content (find-before*
+                (choices1
+                 (c? (org-element))
+                 (c? allowed-greater-element)
+                 (c? (org-affiliated-keyword)))
+                (c? (org-boundary :for :section))))
+   (when-let ((filtered-content (remove "" content :test #'equal)))
+     (list :section filtered-content))))
 
 ;;;
 ;;;  Greater element   http://orgmode.org/worg/dev/org-syntax.html#Greater_Elements
