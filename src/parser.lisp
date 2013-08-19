@@ -42,6 +42,11 @@
 
 (defparameter *position-cache* nil)
 
+(defmacro with-position-cache ((cache string) &body body)
+  `(let* ((,cache (make-string-position-cache ,string))
+          (*position-cache* ,cache))
+     ,@body))
+
 (defun string-position (posn)
   (multiple-value-bind (lineno lposn)
       (string-position-context *position-cache* posn)
@@ -499,13 +504,12 @@
              (when trace
                (format t "---------------- #~D~%" n))
              (destructuring-bind (input expected) tc
-               (let* ((cache  (make-string-position-cache input))
-                      (*position-cache* cache)
-                      (output (parse-string* (org-entry 1) input)))
-                 (unless (equal output expected)
-                   (when trace
-                     (format t "-~%~S~%~S~%~S~%" n input output))
-                   (list '_ n input output)))))
+               (with-position-cache (cache input)
+                 (let ((output (parse-string* (org-entry 1) input)))
+                   (unless (equal output expected)
+                     (when trace
+                       (format t "-~%~S~%~S~%~S~%" n input output))
+                     (list '_ n input output))))))
            *testcases*
            (iota (length *testcases*)))))
 
@@ -696,19 +700,18 @@
   (defun org-complexity (text &optional (parser (if (and (plusp (length text))
                                                          (starts-with #\* text))
                                                     (curry #'org-entry 1)
-                                                    #'org-element))
-                         &aux
-                           (*position-cache* (make-string-position-cache text)))
-    (multiple-value-bind (result vector-context successp front seen-positions)
-        (parse-string* (funcall parser) text)
-      (declare (ignorable result vector-context front))
-      #+nil
-      (format t "parser ~S, text:~%~S~%result ~S, vector-context ~S, successp ~S, front ~S, seen-positions ~S~%"
-              parser text result vector-context successp front seen-positions)
-      (unless successp
-        (error "Failed to parse (using ~S):~%~A"
-               parser (format nil "--- 8< ---~%~S~%--- >8 ---~%" text)))
-      (apply #'+ (hash-table-values seen-positions))))
+                                                    #'org-element)))
+    (with-position-cache (cache text)
+      (multiple-value-bind (result vector-context successp front seen-positions)
+          (parse-string* (funcall parser) text)
+        (declare (ignorable result vector-context front))
+        #+nil
+        (format t "parser ~S, text:~%~S~%result ~S, vector-context ~S, successp ~S, front ~S, seen-positions ~S~%"
+                parser text result vector-context successp front seen-positions)
+        (unless successp
+          (error "Failed to parse (using ~S):~%~A"
+                 parser (format nil "--- 8< ---~%~S~%--- >8 ---~%" text)))
+        (apply #'+ (hash-table-values seen-positions)))))
   (defparameter *overhead-measured-parsers*
     `(("element-line" nil nil ,#'org-element-line)
       ("element"      nil nil ,#'org-element)
@@ -762,54 +765,53 @@
                                 parsers (iota depth-range :start depth-start)))))
   (defun try-org-file (filename &key profile (parser #'org-parser)
                        &aux
-                         (string (alexandria:read-file-into-string filename))
-                         (cache  (make-string-position-cache string))
-                         (*position-cache* cache))
-    (flet ((string-context (posn &key (around 0))
-             (string-position-context-full string cache posn :around around))
-           (top-hits (hash n &aux
-                           (alist (hash-table-alist hash))
-                           (sorted (sort alist #'> :key #'cdr))
-                           (top (subseq sorted 0 (min n (hash-table-count hash)))))
-             (mapcar (lambda (x)
-                       (destructuring-bind (posn . hits) x
-                         (list* posn hits (multiple-value-list (string-position-context cache posn)))))
-                     top))
-           #+nil
-           (show-fn (posn)
-             (show-string-position "x" string posn cache))
-           (print-hit (posn hits)
-             (show-string-position (format nil "~D hits" hits)
-                                   string posn cache)))
-      (declare (ignorable #'print-hit))
-      (format t ";;;~%;;;~%;;; trying: ~S~%" filename)
-      (multiple-value-bind (result vector-context successp front seen-positions)
-          (parse-string* (funcall parser) string)
-        (declare (ignore vector-context))
-        (if (and successp (null front))
-            (let ((top-hits (top-hits seen-positions 25))
-                  (total-references (apply #'+ (hash-table-values seen-positions))))
-              (when (eq profile :full)
-                (Iter (for line in (split-sequence:split-sequence #\Newline string))
-                      (for lineno from 0)
-                      (format t ";   ~A~%" line)
-                      (dolist (line-top (remove lineno top-hits :test #'/= :key #'third))
-                        (destructuring-bind (posn hits lineno lineposn ctxstart ctxend) line-top
-                          (declare (ignore ctxstart ctxend))
-                          (let* ((col (- posn lineposn))
-                                 (fmt (format nil ";;; ~~~D@T^  ~~D hits, posn ~~D:~~D:~~D~~%" col)))
-                            (format t fmt hits posn lineno col))))))
-              (when profile
-                (format t ";;; total context references: ~D~%" total-references))
-              (values result total-references))
-            (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
-              (multiple-value-bind (lineno col lposn rposn line ctx) (string-context failure-posn :around 2)
-                (declare (ignore lposn rposn line))
-                (format t "; ~A at line ~D, col ~D:~%~A~%"
-                        (if successp "partial match" "failure") (1+ lineno) col ctx))))
-        #+nil
-        (iter (for (posn lineno hits) in )
-              (print-hit posn hits)))))
+                         (string (alexandria:read-file-into-string filename)))
+    (with-position-cache (cache string)
+      (flet ((string-context (posn &key (around 0))
+               (string-position-context-full string cache posn :around around))
+             (top-hits (hash n &aux
+                             (alist (hash-table-alist hash))
+                             (sorted (sort alist #'> :key #'cdr))
+                             (top (subseq sorted 0 (min n (hash-table-count hash)))))
+               (mapcar (lambda (x)
+                         (destructuring-bind (posn . hits) x
+                           (list* posn hits (multiple-value-list (string-position-context cache posn)))))
+                       top))
+             #+nil
+             (show-fn (posn)
+               (show-string-position "x" string posn cache))
+             (print-hit (posn hits)
+               (show-string-position (format nil "~D hits" hits)
+                                     string posn cache)))
+        (declare (ignorable #'print-hit))
+        (format t ";;;~%;;;~%;;; trying: ~S~%" filename)
+        (multiple-value-bind (result vector-context successp front seen-positions)
+            (parse-string* (funcall parser) string)
+          (declare (ignore vector-context))
+          (if (and successp (null front))
+              (let ((top-hits (top-hits seen-positions 25))
+                    (total-references (apply #'+ (hash-table-values seen-positions))))
+                (when (eq profile :full)
+                  (Iter (for line in (split-sequence:split-sequence #\Newline string))
+                        (for lineno from 0)
+                        (format t ";   ~A~%" line)
+                        (dolist (line-top (remove lineno top-hits :test #'/= :key #'third))
+                          (destructuring-bind (posn hits lineno lineposn ctxstart ctxend) line-top
+                            (declare (ignore ctxstart ctxend))
+                            (let* ((col (- posn lineposn))
+                                   (fmt (format nil ";;; ~~~D@T^  ~~D hits, posn ~~D:~~D:~~D~~%" col)))
+                              (format t fmt hits posn lineno col))))))
+                (when profile
+                  (format t ";;; total context references: ~D~%" total-references))
+                (values result total-references))
+              (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
+                (multiple-value-bind (lineno col lposn rposn line ctx) (string-context failure-posn :around 2)
+                  (declare (ignore lposn rposn line))
+                  (format t "; ~A at line ~D, col ~D:~%~A~%"
+                          (if successp "partial match" "failure") (1+ lineno) col ctx))))
+          #+nil
+          (iter (for (posn lineno hits) in )
+                (print-hit posn hits))))))
   (defun maybe-time (timep f)
     (if timep (time (funcall f)) (funcall f)))
   (defmacro with-maybe-time ((time) &body body)
