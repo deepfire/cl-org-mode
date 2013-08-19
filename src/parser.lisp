@@ -408,16 +408,20 @@
 (defun org-headline (nstars &optional (startup *org-default-startup*))
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
                        &allow-other-keys) startup
-    (mdo
-      (org-stars nstars)
-      (<- commentedp (opt? (pre-white1? (tag :commented (chook? t comment-keyword)))))
-      (<- quotedp (opt? (pre-white1? (tag :quoted (chook? t quote-keyword)))))
-      (<- keyword (opt? (pre-white1? (tag :todo (apply #'choices1 keywords)))))
-      (<- priority (opt? (pre-white1? (tag :priority (org-priority priorities)))))
-      (<- title (pre-white1? (tag :title (org-title))))
-      (<- tags (opt? (pre-white1? (tag :tags (org-tags)))))
-      (spacetabs) (eol)
-      (result (append commentedp quotedp keyword priority title tags)))))
+    (named-seq*
+      (c? (org-stars nstars))
+      (<- commentedp (c? (opt* (pre-white1? (tag :commented (chook? t (before* comment-keyword
+                                                                               (spacetabs1))))))))
+      (<- quotedp (c? (opt* (pre-white1? (tag :quoted (chook? t (before* quote-keyword
+                                                                         (spacetabs1))))))))
+      (<- keyword (c? (opt* (pre-white1? (tag :todo (before* (apply #'choices1 keywords)
+                                                             (spacetabs1)))))))
+      (<- priority (c? (opt* (pre-white1? (tag :priority (before* (org-priority priorities)
+                                                                  (spacetabs1)))))))
+      (<- title (c? (tag :title (choice1 (pre-white1? (org-title)) ""))))
+      (<- tags (c? (opt* (pre-white1? (tag :tags (org-tags))))))
+      (c? (spacetabs)) (c? (eol))
+      (append commentedp quotedp keyword priority title tags))))
 
 ;;;
 ;;;  Entry   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
