@@ -98,6 +98,8 @@
   (with-posn-info? (char line col)
     (format t "~A, line:col ~D:~D, next char: ~S~%" name line col char)))
 
+(defvar *debug-mode* nil)
+(defvar *debug-print-result* nil)
 
 (defun call-with-maybe-tracing (tracep mark fn)
   (if tracep
@@ -106,11 +108,9 @@
          (format t "~S ? (next ~S, line:col ~D:~D)~%" mark char line col))
        (<- res (funcall fn))
        (progn
-         (format t "~S ok - ~S~%" mark res)
+         (format t "~S ok~[~; - ~S~]~%" mark *debug-print-result* res)
          res))
       (funcall fn)))
-
-(defvar *debug-mode* nil)
 
 (defmacro c? (x)
   `(call-with-maybe-tracing *debug-mode* ',x (lambda () ,x)))
