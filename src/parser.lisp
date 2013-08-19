@@ -77,11 +77,12 @@
   "Non-backtracking parser: Find a p before q, doesn't consume q."
   (parser-combinators::with-parsers (p q)
     (define-oneshot-result inp is-unread
-      (let* ((p-result (funcall (funcall p inp)))
-             (p-suffix (suffix-of p-result))
-             (q-result (funcall (funcall q p-suffix))))
-        (when (and p-result q-result)
-          (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))
+      (let ((p-result (funcall (funcall p inp))))
+        (when p-result
+          (let* ((p-suffix (suffix-of p-result))
+                 (q-result (funcall (funcall q p-suffix))))
+            (when (and p-result q-result)
+              (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))))
 
 (defun chookahead? (result p)
   "Parser: return result if p matches, but do no advance"
