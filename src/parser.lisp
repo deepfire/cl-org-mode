@@ -241,7 +241,7 @@
 (defun org-greater-end-signature ()
   (pre-white? (choice1 (seq-list* (caseless "#+END")
                                   (choice1 "_"
-                                           (before* (opt? ":")
+                                           (before* (opt* ":")
                                                     (eol))))
                        (caseless ":END:"))))
 
@@ -279,12 +279,8 @@
   (named-seq* "#+"
               (<- name      (except? (org-name) (seq-list* (caseless "END")
                                                            (choices1 " " "_" ":"))))
-              (<- optional (opt? (named-seq*
-                                  "["
-                                  (<- ret (line-but-of-1+ #\[ #\]))
-                                  "]"
-                                  ret)))
-              (opt? ":") (opt? " ")
+              (<- optional (opt* (bracket? "[" (line-but-of-1+ #\[ #\]) "]")))
+              (opt* ":") (opt* " ")
               (<- value    (line-without-eol))
               (let ((attributep (starts-with-subseq "ATTR_" name)))
                 (append (if attributep
@@ -328,9 +324,9 @@
   (mdo
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
-    (<- parameters (opt? (pre-white1? (line-without-eol))))
     (<- contents (c? (org-section (org-greater-element))))
-    (pre-white? (caseless "#+END_")) (caseless name) (opt? (seq-list* (spacetabs1) (line-but-of))) (eol)
+    (<- parameters (opt* (pre-white1? (line-without-eol))))
+    (pre-white? (caseless "#+END_")) (caseless name) (opt* (seq-list* (spacetabs1) (line-but-of))) (eol)
     (result (list :block name
                   :parameters parameters
                   :contents contents))))
@@ -341,7 +337,7 @@
   (named-seq*
    (spacetabs)
    (<- name (bracket? ":" (except? (org-name) "END") ":"))
-   (<- value (opt? (pre-white1? (line-but-of))))
+   (<- value (opt* (pre-white1? (line-but-of))))
    (spacetabs) (eol)
    (list :property name :value value)))
 
@@ -349,7 +345,7 @@
   "Deviation: does not parse own contents."
   (mdo
     (<- name    (pre-white? (bracket? ":" (except? (org-name) (caseless "END")) ":")))
-    (opt? (line-but-of)) (eol)
+    (opt* (line-but-of)) (eol)
     (<- contents (cond ((string-equal name "PROPERTIES")
                         (many* (org-property)))
                        (t
@@ -368,11 +364,11 @@
   (mdo
     (pre-white? (caseless "#+BEGIN:"))
     (<- name (pre-white1? (line-but-of #\Space)))
-    (<- parameters (opt? (pre-white? (line-without-eol))))
     (<- contents (org-section (org-greater-element)))
+    (<- parameters (opt* (pre-white? (line-without-eol))))
     (pre-white? (seq-list* (caseless "#+END")
-                           (before* (opt? ":")
-                                    (seq-list* (opt? (seq-list* (spacetabs1)
+                           (before* (opt* ":")
+                                    (seq-list* (opt* (seq-list* (spacetabs1)
                                                                 (line-but-of)))
                                                (eol)))))
     (result (list :dynamic-block name
@@ -399,7 +395,7 @@
 (defun org-title ()
   (hook? #'to-string
          (find-before* (line-constituent-but nil)
-                       (seq-list* (opt? (pre-white1? (org-tags)))
+                       (seq-list* (opt* (pre-white1? (org-tags)))
                                   (eol)))))
 
 (defun org-stars (n)
@@ -597,7 +593,7 @@
              (setf valid (set-difference valid conflicted))
              (values all-opts valid unknown duplicate conflicted))))
     (named-seq*
-     (<- mix (opt? (org-section (org-greater-element))))
+     (<- mix (opt* (org-section (org-greater-element))))
      (multiple-value-bind (raw-keywords section-content)
          (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
        (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
