@@ -131,7 +131,7 @@
   (choices1 (string-downcase x) (string-upcase x)))
 
 (defun spacetab ()
-  (choice1 #\Space #\Tab))
+  (char-bag '(#\Space #\Tab)))
 
 (defun newline ()
   (chook? +newline-string+
