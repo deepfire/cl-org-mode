@@ -347,6 +347,14 @@
 (defun org-stars (n)
   (seq-list* (times? #\* n)
              (chookahead? t " ")))
+(defparameter *org-default-startup*
+  '(:odd              nil
+    :comment-keyword  "COMMENT"
+    :quote-keyword    "QUOTE"
+    :footnote-title   "Footnotes"
+    :keywords        ("TODO" "DONE")
+    :priorities      ("A" "B" "C"))
+  "So called 'startup' options, in absence of any headers.")
 
 (defun org-headline (nstars &optional (startup *org-default-startup*))
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
@@ -487,15 +495,6 @@
     (:hideblocks :nohideblocks)
     (:entitiespretty :entitiesplain)
     ))
-
-(defparameter *org-default-startup*
-  '(:odd              nil
-    :comment-keyword  "COMMENT"
-    :quote-keyword    "QUOTE"
-    :footnote-title   "Footnotes"
-    :keywords        ("TODO" "DONE")
-    :priorities      ("A" "B" "C"))
-  "So called 'startup' options, in absence of any headers.")
 
 (defun merge-startup (stronger weaker)
   (append stronger weaker))
