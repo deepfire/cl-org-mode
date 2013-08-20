@@ -384,12 +384,13 @@
                                            " "))
                               variants))))
 
-(defun org-entry (stars &optional (startup *org-default-startup*))
+(defun org-entry (stars &optional (startup *org-default-startup*)
+                  &aux (odd (getf startup :odd)))
   (named-seq*
    (<- headline (c? (org-headline stars)))
    (<- body     (c? (named-seq*
                      (<- section  (delayed? (org-section (org-greater-element))))
-                     (<- children (delayed? (many* (org-child-entry stars startup))))
+                     (<- children (delayed? (many* (org-entry (+ stars (if odd 2 1)) startup))))
                      (append (when section
                                (list section))
                              children))))
@@ -398,9 +399,6 @@
 
 (defun org-top-entry (startup)
   (org-entry 1 (merge-startup startup *org-default-startup*)))
-
-(defun org-child-entry (stars startup &aux (odd (getf startup :odd)))
-  (org-entry (+ stars (if odd 2 1)) startup))
 
 (defparameter *testcases*
   '(;; 0
