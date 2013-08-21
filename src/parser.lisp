@@ -412,28 +412,28 @@
 
 (defparameter *testcases*
   '(;; 0
-    ("* a" (:ENTRY (:TITLE "a")))
+    ("* a" (:ENTRY (:STARS 1 :TITLE "a")))
     ;; 1
     ("* a
-"          (:ENTRY (:TITLE "a")))
+"          (:ENTRY (:STARS 1 :TITLE "a")))
     ;; 2
     ("* a
-   a text" (:ENTRY (:TITLE "a")
+   a text" (:ENTRY (:STARS 1 :TITLE "a")
             (:SECTION ("   a text
 "))))
     ;; 3
     ("* a
 ** b
-"          (:ENTRY (:TITLE "a")
-            (:ENTRY (:TITLE "b"))))
+"          (:ENTRY (:STARS 1 :TITLE "a")
+            (:ENTRY (:STARS 2 :TITLE "b"))))
     ;; 4
     ("* a
    a text
 ** b
-"          (:ENTRY (:TITLE "a")
+"          (:ENTRY (:STARS 1 :TITLE "a")
             (:SECTION ("   a text
 "))
-            (:ENTRY (:TITLE "b"))))
+            (:ENTRY (:STARS 2 :TITLE "b"))))
     ;; 5
     ("* a
 
@@ -442,12 +442,12 @@
 ** b
    b text
 
-"          (:ENTRY (:TITLE "a")
+"          (:ENTRY (:STARS 1 :TITLE "a")
             (:SECTION ("
   a text
 
 "))
-            (:ENTRY (:TITLE "b")
+            (:ENTRY (:STARS 2 :TITLE "b")
                     (:SECTION
                      ("   b text
 
@@ -455,10 +455,10 @@
     ("* a
 
 ** b
-"          (:ENTRY (:TITLE "a")
+"          (:ENTRY (:STARS 1 :TITLE "a")
             (:SECTION ("
 "))
-            (:ENTRY (:TITLE "b"))))))
+            (:ENTRY (:STARS 2 :TITLE "b"))))))
 
 (defun test-org-entry (&optional (trace t) (debug t)
                        &aux (*debug-mode* debug))
