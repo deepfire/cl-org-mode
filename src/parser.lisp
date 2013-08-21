@@ -364,7 +364,7 @@
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
                        &allow-other-keys) startup
     (named-seq*
-      (c? (org-stars nstars))
+      (<- stars (c? (org-stars nstars)))
       (<- commentedp (c? (opt* (pre-white1? (tag :commented (chook? t (before* comment-keyword
                                                                                (spacetabs1))))))))
       (<- quotedp (c? (opt* (pre-white1? (tag :quoted (chook? t (before* quote-keyword
@@ -376,33 +376,23 @@
       (<- title (c? (tag :title (choice1 (pre-white1? (org-title)) ""))))
       (<- tags (c? (opt* (pre-white1? (tag :tags (org-tags))))))
       (c? (spacetabs)) (c? (eol))
-      (append commentedp quotedp keyword priority title tags))))
+      (list* :stars (length (first stars))
+             (append commentedp quotedp keyword priority title tags)))))
 
 ;;;
 ;;;  Entry   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
-(defun org-closing-headline-variants (current startup)
-  (let ((variants (loop :for x :downfrom current :to 1 :by (if (getf startup :odd) 2 1)
-                     :collect x)))
-    (apply #'choices1 (mapcar (lambda (n)
-                                (seq-list* (org-stars n)
-                                           " "))
-                              variants))))
-
-(defun org-entry (stars &optional (startup *org-default-startup*)
-                  &aux (odd (getf startup :odd)))
-  (named-seq*
-   (<- headline (c? (org-headline stars)))
-   (<- body     (c? (named-seq*
-                     (<- section  (delayed? (org-section (org-greater-element))))
-                     (<- children (delayed? (many* (org-entry (+ stars (if odd 2 1)) startup))))
-                     (append (when section
-                               (list section))
-                             children))))
-   (append (list :entry headline)
-           body)))
-
-(defun org-top-entry (startup)
-  (org-entry 1 (merge-startup startup *org-default-startup*)))
+(defun org-entry (stars)
+  (mdo
+    (<- headline (c? (org-headline stars)))
+    (<- body     (c? (named-seq*
+                      (<- section  (delayed? (org-section (org-greater-element))))
+                      (<- children (let ((de-facto-stars (getf headline :stars)))
+                                     (many* (c? (delayed? (org-entry (+ de-facto-stars 1)))))))
+                      (append (when section
+                                (list section))
+                              children))))
+    (result (append (list :entry headline)
+                    body))))
 
 (defparameter *testcases*
   '(;; 0
@@ -575,7 +565,7 @@
 (defun org-parser ()
   (mdo
     (<- initial (org-header))
-    (<- entries    (many* (org-top-entry (tree-getf (first initial) :header :startup))))
+    (<- entries    (many* (c? (org-entry 1))))
     (result (cons :org
                   (append initial entries)))))
 
@@ -672,8 +662,9 @@
                                         (append (list name) seq
                                                 (list (list :char-cost rate)))))))
                                 parsers (iota depth-range :start depth-start)))))
-  (defun try-org-file (filename &key profile (parser #'org-parser)
+  (defun try-org-file (filename &key profile debug (parser #'org-parser)
                        &aux
+                         (*debug-mode* debug)
                          (string (alexandria:read-file-into-string filename)))
     (with-position-cache (cache string)
       (flet ((string-context (posn &key (around 0))
@@ -726,7 +717,7 @@
   (defmacro with-maybe-time ((time) &body body)
     `(maybe-time ,time (lambda () ,@body)))
   (load "~/org-file-index.lisp")
-  (defun test (&key profile (total (length *org-files*))
+  (defun test (&key profile debug (total (length *org-files*))
                &aux
                  (filelist *org-files*)
                  (total-contexts 0)
