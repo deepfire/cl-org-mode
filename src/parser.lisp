@@ -344,9 +344,13 @@
                        (seq-list* (opt* (pre-white1? (org-tags)))
                                   (eol)))))
 
-(defun org-stars (n)
-  (seq-list* (times? #\* n)
-             (chookahead? t " ")))
+(let ((star-cache (make-hash-table :test 'eq)))
+  (defun org-stars (n)
+    (or (gethash n star-cache)
+        (setf (gethash n star-cache)
+              (seq-list* (between* #\* n nil 'string)
+                         (chookahead? t " "))))))
+
 (defparameter *org-default-startup*
   '(:odd              nil
     :comment-keyword  "COMMENT"
