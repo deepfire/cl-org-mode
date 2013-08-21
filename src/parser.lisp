@@ -165,8 +165,8 @@
 (defun org-element (&key (kind :section-element))
   "Actually org-paragraph."
   (mdo
-    (<- lines (find-before* (c? (org-element-line :in kind))
-                            (c? (org-boundary :for kind))))
+    (<- lines (find-before* (org-element-line :in kind)
+                            (org-boundary :for kind)))
     (if lines
         (result (strconcat lines))
         (zero))))
@@ -195,15 +195,15 @@
   (named-seq*
    (<- content (find-before*
                 (choices1
-                 (c? (org-element :kind (ecase kind
-                                          (:entry-section     :section-element)
-                                          (:section-in-block  :element-in-block)
-                                          (:section-in-drawer :element-in-drawer))))
-                 (c? (case kind
-                       (:section-in-drawer (org-greater-nondrawer-element))
-                       (t                  (org-greater-element))))
-                 (c? (org-affiliated-keyword)))
-                (c? (org-boundary :for kind))))
+                 (org-element :kind (ecase kind
+                                      (:entry-section     :section-element)
+                                      (:section-in-block  :element-in-block)
+                                      (:section-in-drawer :element-in-drawer)))
+                 (case kind
+                   (:section-in-drawer (org-greater-nondrawer-element))
+                   (t                  (org-greater-element)))
+                 (org-affiliated-keyword))
+                (org-boundary :for kind)))
    (when-let ((filtered-content (remove "" content :test #'equal)))
      (list :section filtered-content))))
 
@@ -229,7 +229,7 @@
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
     (<- parameters (opt* (pre-white1? (line-without-eol))))
-    (<- contents (c? (delayed? (org-section :kind :section-in-block))))
+    (<- contents (delayed? (org-section :kind :section-in-block)))
     (pre-white? (caseless "#+END_")) (caseless name) (opt* (seq-list* (spacetabs1) (line-but-of))) (eol)
     (result (list :block name
                   :parameters parameters
@@ -322,33 +322,33 @@
   (destructuring-bind (&key comment-keyword quote-keyword keywords priorities
                        &allow-other-keys) startup
     (named-seq*
-      (<- stars (c? (org-stars nstars)))
-      (<- commentedp (c? (opt* (pre-white1? (tag :commented (chook? t (before* comment-keyword
-                                                                               (spacetabs1))))))))
-      (<- quotedp (c? (opt* (pre-white1? (tag :quoted (chook? t (before* quote-keyword
-                                                                         (spacetabs1))))))))
-      (<- keyword (c? (opt* (pre-white1? (tag :todo (before* (apply #'choices1 keywords)
-                                                             (spacetabs1)))))))
-      (<- priority (c? (opt* (pre-white1? (tag :priority (before* (org-priority priorities)
-                                                                  (spacetabs1)))))))
-      (<- title (c? (tag :title (choice1 (pre-white1? (org-title)) ""))))
-      (<- tags (c? (opt* (pre-white1? (tag :tags (org-tags))))))
-      (c? (spacetabs)) (c? (eol))
-      (list* :stars (length (first stars))
-             (append commentedp quotedp keyword priority title tags)))))
+     (<- stars (org-stars nstars))
+     (<- commentedp (opt* (pre-white1? (tag :commented (chook? t (before* comment-keyword
+                                                                          (spacetabs1)))))))
+     (<- quotedp (opt* (pre-white1? (tag :quoted (chook? t (before* quote-keyword
+                                                                    (spacetabs1)))))))
+     (<- keyword (opt* (pre-white1? (tag :todo (before* (apply #'choices1 keywords)
+                                                        (spacetabs1))))))
+     (<- priority (opt* (pre-white1? (tag :priority (before* (org-priority priorities)
+                                                             (spacetabs1))))))
+     (<- title (tag :title (choice1 (pre-white1? (org-title)) "")))
+     (<- tags (opt* (pre-white1? (tag :tags (org-tags)))))
+     (spacetabs) (eol)
+     (list* :stars (length (first stars))
+            (append commentedp quotedp keyword priority title tags)))))
 
 ;;;
 ;;;  Entry   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
 (defun org-entry (stars)
   (mdo
-    (<- headline (c? (org-headline stars)))
-    (<- body     (c? (named-seq*
-                      (<- section  (delayed? (org-section :kind :entry-section)))
-                      (<- children (let ((de-facto-stars (getf headline :stars)))
-                                     (many* (c? (delayed? (org-entry (+ de-facto-stars 1)))))))
-                      (append (when section
-                                (list section))
-                              children))))
+    (<- headline (org-headline stars))
+    (<- body     (named-seq*
+                  (<- section  (delayed? (org-section :kind :entry-section)))
+                  (<- children (let ((de-facto-stars (getf headline :stars)))
+                                 (many* (delayed? (org-entry (+ de-facto-stars 1))))))
+                  (append (when section
+                            (list section))
+                          children)))
     (result (append (list :entry headline)
                     body))))
 
@@ -523,7 +523,7 @@
 (defun org-parser ()
   (mdo
     (<- initial (org-header))
-    (<- entries    (many* (c? (org-entry 1))))
+    (<- entries    (many* (org-entry 1)))
     (result (cons :org
                   (append initial entries)))))
 
