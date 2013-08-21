@@ -543,7 +543,7 @@
   ;; (progn (require :cl-org-mode) (in-package :cl-org-mode))
   (defun string-position-context-full (string cache posn &key (around 0))
     (multiple-value-bind (lineno lposn ctxstart ctxend)
-        (parser-combinators::string-position-context cache posn :around around)
+        (parser-combinators-debug::string-position-context cache posn :around around)
       (let ((lend (or (position #\Newline string :start lposn)
                       (length string))))
         (values lineno (- posn lposn) lposn lend
@@ -635,7 +635,7 @@
                              (top (subseq sorted 0 (min n (hash-table-count hash)))))
                (mapcar (lambda (x)
                          (destructuring-bind (posn . hits) x
-                           (list* posn hits (multiple-value-list (parser-combinators::string-position-context cache posn)))))
+                           (list* posn hits (multiple-value-list (parser-combinators-debug::string-position-context cache posn)))))
                        top))
              #+nil
              (show-fn (posn)
