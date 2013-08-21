@@ -695,7 +695,7 @@
           (declare (ignore vector-context))
           (if (and successp (null front))
               (let ((top-hits (top-hits seen-positions 25))
-                    (total-references (apply #'+ (hash-table-values seen-positions))))
+                    (total-references (reduce #'+ (hash-table-values seen-positions) :initial-value 0)))
                 (when (eq profile :full)
                   (Iter (for line in (split-sequence:split-sequence #\Newline string))
                         (for lineno from 0)
