@@ -734,7 +734,7 @@
     (with-maybe-time (profile)
       (dolist (f (subseq filelist 0 total))
         (with-maybe-time (profile)
-          (multiple-value-bind (success ncontexts) (try-org-file f :profile profile)
+          (multiple-value-bind (success ncontexts) (try-org-file f :profile profile :debug debug)
             (when ncontexts
               (incf total-contexts ncontexts))
             (when success
