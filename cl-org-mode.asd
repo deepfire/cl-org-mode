@@ -9,7 +9,8 @@
 	     (:file "utils")
 	     (:file "protocol")
 	     (:file "parser")
+	     (:file "new-parser")
 	     (:file "cl-org-mode")
 	     )))
   :serial t
-  :depends-on (:alexandria :closer-mop :parser-combinators-debug :split-sequence))
+  :depends-on (:alexandria :closer-mop :parser-combinators :split-sequence))
