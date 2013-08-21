@@ -29,37 +29,6 @@
 	       (node-start object stack)
 	     (when result (return (values result old-stack))))))
 
-;;
-;; Extensions
-(defmacro c? (form)
-  `(check? ,form))
-
-(defmacro mdo* (&body spec)
-  (with-gensyms (ret)
-    `(named-seq*
-      ,@(butlast spec)
-      (<- ,ret ,(lastcar spec))
-      ,ret)))
-
-(defun before* (p q)
-  "Non-backtracking parser: Find a p before q, doesn't consume q."
-  (parser-combinators::with-parsers (p q)
-    (define-oneshot-result inp is-unread
-      (let ((p-result (funcall (funcall p inp))))
-        (when p-result
-          (let* ((p-suffix (suffix-of p-result))
-                 (q-result (funcall (funcall q p-suffix))))
-            (when (and p-result q-result)
-              (make-instance 'parser-possibility :tree (tree-of p-result) :suffix p-suffix))))))))
-
-(defun chookahead? (result p)
-  "Parser: return result if p matches, but do no advance"
-  (parser-combinators::with-parsers (p)
-    (define-oneshot-result inp is-unread
-      (let ((p-result (funcall (funcall p inp))))
-        (when p-result
-          (make-instance 'parser-possibility :tree result :suffix inp))))))
-
 ;;;
 ;;; Tools
 (defun unzip (fn sequence &key (key #'identity))
