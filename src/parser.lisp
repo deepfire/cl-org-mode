@@ -349,7 +349,7 @@
     (or (gethash n star-cache)
         (setf (gethash n star-cache)
               (seq-list* (between* #\* n nil 'string)
-                         (chookahead? t " "))))))
+                         (chookahead? t (choice1 " " (eol))))))))
 
 (defparameter *org-default-startup*
   '(:odd              nil
