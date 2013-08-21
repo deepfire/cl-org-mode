@@ -29,8 +29,6 @@
 	       (node-start object stack)
 	     (when result (return (values result old-stack))))))
 
-(declaim (optimize debug safety))
-
 ;;
 ;; Extensions
 (defmacro c? (form)
@@ -62,11 +60,6 @@
         (when p-result
           (make-instance 'parser-possibility :tree result :suffix inp))))))
 
-(defun failing? (p)
-  (named-seq*
-   p
-   (zero)))
-
 ;;;
 ;;; Tools
 (defun unzip (fn sequence &key (key #'identity))
@@ -76,30 +69,10 @@
             (collect elt into no))
         (finally (return (values yes no)))))
 
-(defun tree-getf (tree &rest keys)
-  (if keys
-      (apply #'tree-getf (getf tree (first keys)) (rest keys))
-      tree))
-
-(defun to-string (xs)
-  (coerce xs 'string))
-
-(defun to-symbol (package xs)
-  (intern (string-upcase (to-string xs)) package))
-
-(defun intersperse (elt xs)
-  (nbutlast
-   (loop :for x :in xs
-      :collect x
-      :collect elt)))
-
 (define-constant +newline-string+ (coerce #(#\Newline) 'string) :test #'equal)
 
 (defun strconcat (xs)
   (apply #'concatenate 'string xs))
-
-(defun strconcat* (&rest xs)
-  (strconcat xs))
 
 ;;;
 ;;; Primitives
@@ -355,10 +328,10 @@
               tags))
 
 (defun org-title ()
-  (hook? #'to-string
-         (find-before* (line-constituent-but nil)
-                       (seq-list* (opt* (pre-white1? (org-tags)))
-                                  (eol)))))
+  (find-before* (line-constituent-but nil)
+                (seq-list* (opt* (pre-white1? (org-tags)))
+                           (eol))
+                'string))
 
 (let ((star-cache (make-hash-table :test 'eq)))
   (defun org-stars (n)
@@ -642,7 +615,9 @@
                                      trailing-newline-p
                                    &aux
                                      (*debug-mode* debug))
-    (labels ((generate-overhead-org (depth text-length)
+    (labels ((strconcat* (&rest xs)
+               (strconcat xs))
+             (generate-overhead-org (depth text-length)
                (iter (for i below (1+ depth))
                      (when (plusp i)
                        (collecting (strconcat* (make-string i :initial-element #\*)
