@@ -1,0 +1,41 @@
+## -*- mode: org -*-
+#+STARTUP: hidestars odd
+#+AUTHOR: Samium Gromoff
+#+EMAIL: _deepfire@feelingofgreen.ru
+
+* Properties
+
+  * rougly follows the in-progress spec at:
+
+    http://orgmode.org/worg/dev/org-syntax.html
+
+  * relative tolerance to improper input
+  * a semi-acceptable precision/efficiency ratio, whatever that means
+    - parses ~10kloc-long markup-heavy Org files in <10s
+  * all greater elements supported:
+    - dynamic blocks
+    - greater blocks
+    - drawers, including property drawers
+  * non-greater elements supported:
+    - paragraphs
+    - affiliated keywords
+  * based on PARSER-COMBINATORS, by Jakub Higersberger (thank you!)
+  * has a built-in profiler, in src/new-parser-tests.lisp
+
+* Testing the new parser
+
+  It would suffice to just do:
+
+  #+BEGIN_SRC common-lisp
+  (require :cl-org-mode-tests)
+  (test '(#p"/path/to/your/org-testcase-1.lisp"
+          #p"/path/to/your/org-testcase-2.lisp"))
+  #+END_SRC
+
+  It parses all 28 org files on my computer : -)
+
+  Additionally, there is a limited amount of canned testcases for ORG-ENTRY:
+
+  #+BEGIN_SRC common-lisp
+  (test-org-entry)
+  #+END_SRC
