@@ -182,41 +182,52 @@
 ;;;
 ;;;  Element   http://orgmode.org/worg/dev/org-syntax.html#Elements
 (defun org-greater-signature ()
-  (pre-white? (choice1 "#+" (bracket? ":" (org-name) ":"))))
+  (choice1 "#+" (bracket? ":" (org-name) ":")))
 
-(defun org-greater-end-signature ()
-  (pre-white? (choice1 (seq-list* (caseless "#+END")
-                                  (choice1 "_"
-                                           (before* (opt* ":")
-                                                    (eol))))
-                       (caseless ":END:"))))
+(defun org-block-end-signature ()
+  (seq-list* (caseless "#+END")
+             (choice1 "_"
+                      (before* (opt* ":")
+                               (eol)))))
+
+(defun org-drawer-end-signature ()
+  (caseless ":END:"))
 
 (defun org-boundary (&key for)
-  (choices1 "*"
-            (ecase for
-              (:element
-               (org-greater-signature))
-              (:section
-               (org-greater-end-signature)))
+  (choices1 (if (member for '(:section-element :entry-section))
+                "*" (zero))
+            (pre-white?
+             (ecase for
+               (:section-element   (org-greater-signature))
+               (:element-in-block  "#+")
+               (:element-in-drawer (bracket? ":" (org-name) ":"))
+               (:entry-section     (choice1 (org-block-end-signature)
+                                            (org-drawer-end-signature)))
+               (:section-in-block  (org-block-end-signature))
+               (:section-in-drawer (org-drawer-end-signature))))
             (end?)))
 
-(defun org-element-line ()
+(defun org-element-line (&key in)
   (choice1
    (except? (named-seq*
-             (<- first-char (line-constituent-but* #\*))
+             (<- first-char (line-constituent-but (when (eq in :section-element)
+                                                    '(#\*))))
              (<- line       (line-full))
              (concatenate 'string (list first-char) line))
-            (org-greater-signature))
+            (ecase in
+              (:section-element   (org-greater-signature))
+              (:element-in-block  "#+")
+              (:element-in-drawer (bracket? ":" (org-name) ":"))))
    (eol)))
 
-(defun org-element ()
+(defun org-element (&key (kind :section-element))
   "Actually org-paragraph."
   (mdo
-    (<- lines (find-before* (c? (org-element-line))
-                            (c? (org-boundary :for :element))))
-   (if lines
-       (result (strconcat lines))
-       (zero))))
+    (<- lines (find-before* (c? (org-element-line :in kind))
+                            (c? (org-boundary :for kind))))
+    (if lines
+        (result (strconcat lines))
+        (zero))))
 
 ;;;
 ;;;  Affiliated keyword   http://orgmode.org/worg/dev/org-syntax.html#Affiliated_keywords
@@ -238,14 +249,19 @@
 
 ;;;
 ;;;  Section   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
-(defun org-section (allowed-greater-element)
+(defun org-section (&key (kind :entry-section))
   (named-seq*
    (<- content (find-before*
                 (choices1
-                 (c? (org-element))
-                 (c? allowed-greater-element)
+                 (c? (org-element :kind (ecase kind
+                                          (:entry-section     :section-element)
+                                          (:section-in-block  :element-in-block)
+                                          (:section-in-drawer :element-in-drawer))))
+                 (c? (case kind
+                       (:section-in-drawer (org-greater-nondrawer-element))
+                       (t                  (org-greater-element))))
                  (c? (org-affiliated-keyword)))
-                (c? (org-boundary :for :section))))
+                (c? (org-boundary :for kind))))
    (when-let ((filtered-content (remove "" content :test #'equal)))
      (list :section filtered-content))))
 
@@ -271,7 +287,7 @@
     (pre-white? (caseless "#+BEGIN_"))
     (<- name (org-name))
     (<- parameters (opt* (pre-white1? (line-without-eol))))
-    (<- contents (c? (delayed? (org-section (org-greater-element)))))
+    (<- contents (c? (delayed? (org-section :kind :section-in-block))))
     (pre-white? (caseless "#+END_")) (caseless name) (opt* (seq-list* (spacetabs1) (line-but-of))) (eol)
     (result (list :block name
                   :parameters parameters
@@ -295,7 +311,7 @@
     (<- contents (cond ((string-equal name "PROPERTIES")
                         (many* (org-property)))
                        (t
-                        (delayed? (org-section (org-greater-nondrawer-element))))))
+                        (delayed? (org-section :kind :section-in-drawer)))))
     (choices1
      (seq-list* (pre-white? (caseless ":END:")) (spacetabs) (eol))
      (chookahead? t (choices1 "*"
@@ -311,7 +327,7 @@
     (pre-white? (caseless "#+BEGIN:"))
     (<- name (pre-white1? (line-but-of #\Space)))
     (<- parameters (opt* (pre-white? (line-without-eol))))
-    (<- contents (delayed? (org-section (org-greater-element))))
+    (<- contents (delayed? (org-section :kind :section-in-block)))
     (pre-white? (seq-list* (caseless "#+END")
                            (before* (opt* ":")
                                     (seq-list* (opt* (seq-list* (spacetabs1)
@@ -385,7 +401,7 @@
   (mdo
     (<- headline (c? (org-headline stars)))
     (<- body     (c? (named-seq*
-                      (<- section  (delayed? (org-section (org-greater-element))))
+                      (<- section  (delayed? (org-section :kind :entry-section)))
                       (<- children (let ((de-facto-stars (getf headline :stars)))
                                      (many* (c? (delayed? (org-entry (+ de-facto-stars 1)))))))
                       (append (when section
@@ -530,7 +546,7 @@
              (setf valid (set-difference valid conflicted))
              (values all-opts valid unknown duplicate conflicted))))
     (named-seq*
-     (<- mix (opt* (org-section (org-greater-element))))
+     (<- mix (opt* (org-section :kind :entry-section)))
      (multiple-value-bind (raw-keywords section-content)
          (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
        (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
@@ -614,7 +630,7 @@
   (defparameter *overhead-measured-parsers*
     `(("element-line" nil nil ,#'org-element-line)
       ("element"      nil nil ,#'org-element)
-      ("section"      nil t   ,(curry #'org-section (org-greater-element)))
+      ("section"      nil t   ,#'org-section)
       ("entry"        t   t   ,(curry #'org-entry 1))
       ("org"          t   t   ,#'org-parser)))
   (defun parser-context-overheads (&key
