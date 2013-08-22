@@ -73,14 +73,14 @@
   (between* (spacetab) 1 nil 'string))
 
 (defun pre-white1? (x)
-  (mdo*
-    (spacetabs1)
-    x))
+  (hook? #'lastcar (seq-list*
+                    (spacetabs1)
+                    x)))
 
 (defun pre-white? (x)
-  (mdo*
-    (spacetabs)
-    x))
+  (hook? #'lastcar (seq-list*
+                    (spacetabs)
+                    x)))
 
 (defun org-name ()
   (string-of-1+ (choices1 (alphanum?) #\_ #\-)))
