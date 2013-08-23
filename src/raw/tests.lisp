@@ -1,4 +1,4 @@
-(in-package :cl-org-mode)
+(in-package :cl-org-mode-raw-tests)
 
 (defparameter *org-entry-testcases*
   '( ;; 0
@@ -50,7 +50,7 @@
 "))
             (:ENTRY (:STARS 2 :TITLE "b"))))))
 
-(defun test-org-entry (&optional (trace t) (debug t)
+(defun test-org-entry (&optional trace debug
                        &aux (*debug-mode* debug))
   (values-list
    (mapcan (lambda (tc n)

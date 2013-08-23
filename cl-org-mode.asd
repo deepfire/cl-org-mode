@@ -13,4 +13,4 @@
 	     (:file "cl-org-mode")
 	     )))
   :serial t
-  :depends-on (:alexandria :closer-mop :parser-combinators :split-sequence))
+  :depends-on (:alexandria :closer-mop))
