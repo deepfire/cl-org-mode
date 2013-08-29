@@ -9,8 +9,7 @@
 	     (:file "utils")
 	     (:file "protocol")
 	     (:file "parser")
-	     (:file "new-parser")
 	     (:file "cl-org-mode")
 	     )))
   :serial t
-  :depends-on (:alexandria :closer-mop))
+  :depends-on (:alexandria :closer-mop :iterate))
