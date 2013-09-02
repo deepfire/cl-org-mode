@@ -202,9 +202,10 @@
     (<- parameters (opt* (pre-white1? (line-without-eol))))
     (<- contents (delayed? (org-section :kind :section-in-block)))
     (pre-white? (caseless "#+END_")) (caseless name) (opt* (seq-list* (spacetabs1) (line-but-of))) (eol)
-    (result (list :block name
-                  :parameters parameters
-                  :contents contents))))
+    (result (append (list :block name)
+                    (when parameters
+                      (list :parameters parameters))
+                    (list :contents contents)))))
 
 ;;;
 ;;;  Drawer   http://orgmode.org/worg/dev/org-syntax.html#Drawers_and_Property_Drawers
@@ -230,7 +231,10 @@
      (chookahead? t (choices1 "*"
                               (seq-list* (spacetabs) "#+")
                               (end?))))
-    (result (list :drawer name
+    (result (list (if (string-equal name "PROPERTIES")
+                      :property-drawer
+                      :basic-drawer)
+                  name
                   :contents contents))))
 
 ;;;
@@ -246,9 +250,10 @@
                                     (seq-list* (opt* (seq-list* (spacetabs1)
                                                                 (line-but-of)))
                                                (eol)))))
-    (result (list :dynamic-block name
-                  :parameters parameters
-                  :contents contents))))
+    (result (append (list :block name)
+                    (when parameters
+                      (list :parameters parameters))
+                    (list :contents contents)))))
 
 ;;;
 ;;;  Headline   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections
@@ -412,11 +417,11 @@
                (when conflicted
                  (format t ";;;    conflicted:~{ ~S~}~%" conflicted)))
              `((:header
-                ,(append (remove-from-plist keyword-plist :startup)
-                         (when valid
-                           (list :startup (keywords-as-flags valid)))
-                         (when (or unknown conflicted)
-                           (list :startup-all (keywords-as-flags all)))))
+                ,@(append (remove-from-plist keyword-plist :startup)
+                          (when valid
+                            (list :startup (keywords-as-flags valid)))
+                          (when (or unknown conflicted)
+                            (list :startup-all (keywords-as-flags all)))))
                ,@(when section-content
                        (list (list :section section-content)))))))))))
 
