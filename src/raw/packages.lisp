@@ -18,8 +18,8 @@
    #:org-header
    #:org-parser
    ;;
-   #:org-parse-string
-   #:org-parse))
+   #:org-raw-parse-string
+   #:org-raw-parse))
 
 (defpackage :cl-org-mode-raw-tests
   (:use :common-lisp :alexandria :iterate

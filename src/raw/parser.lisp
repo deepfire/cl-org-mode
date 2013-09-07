@@ -432,12 +432,12 @@
     (result (cons :org
                   (append initial entries)))))
 
-(defun org-parse-string (string)
+(defun org-raw-parse-string (string)
   (parse-string* (org-parser) string))
 
-(defun org-parse (x)
+(defun org-raw-parse (x)
   (etypecase x
     (string
-     (org-parse-string x))
+     (org-raw-parse-string x))
     ((or pathname stream)
-     (org-parse-string (read-file-into-string x)))))
+     (org-raw-parse-string (read-file-into-string x)))))
