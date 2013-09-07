@@ -311,7 +311,7 @@
      (<- tags (opt* (pre-white1? (tag :tags (org-tags)))))
      (spacetabs) (eol)
      (list* :stars (length (first stars))
-            (append commentedp quotedp keyword priority title tags)))))
+            (append title commentedp quotedp keyword priority tags)))))
 
 ;;;
 ;;;  Entry   http://orgmode.org/worg/dev/org-syntax.html#Headlines_and_Sections

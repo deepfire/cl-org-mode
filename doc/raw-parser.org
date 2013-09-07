@@ -14,13 +14,13 @@
 org                    := ( :org org-header org-section org-entry* )
 org-header             := ( :header org-option* )
 org-entry              := ( :entry org-headline org-section org-entry* )
-org-headline           := ( :stars <integer> org-headline-tag* org-entry-title [ org-entry-tags ] )
-org-entry-title        := <string>
+org-headline           := ( :stars <integer> org-entry-title org-headline-tag* [ org-entry-tags ] )
+org-entry-title        := :title <string>
 org-headline-tag       := :commented t
                         | :quoted t
                         | :todo <keyword>
                         | :priority <string>
-org-entry-tags         := ( :tags <string>* )
+org-entry-tags         := :tags ( <string>* )
 org-section            := ( :section org-section-part )
 org-section-component  := org-element
                         | org-greater-element
