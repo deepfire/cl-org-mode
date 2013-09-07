@@ -11,9 +11,9 @@
 * Structure
 
 #+BEGIN_EXAMPLE
-org                    := ( :org org-header [ org-section ] org-entry* )
+org                    := ( :org org-header org-section org-entry* )
 org-header             := ( :header org-option* )
-org-entry              := ( :entry org-headline [ org-section ] org-entry* )
+org-entry              := ( :entry org-headline org-section org-entry* )
 org-headline           := ( :stars <integer> org-headline-tag* org-entry-title [ org-entry-tags ] )
 org-entry-title        := <string>
 org-headline-tag       := :commented t

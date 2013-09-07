@@ -322,9 +322,7 @@
                   (<- section  (delayed? (org-section :kind :entry-section)))
                   (<- children (let ((de-facto-stars (getf headline :stars)))
                                  (many* (delayed? (org-entry (+ de-facto-stars 1))))))
-                  (append (when section
-                            (list section))
-                          children)))
+                  (cons section children)))
     (result (append (list :entry headline)
                     body))))
 
@@ -422,8 +420,8 @@
                             (list :startup (keywords-as-flags valid)))
                           (when (or unknown conflicted)
                             (list :startup-all (keywords-as-flags all)))))
-               ,@(when section-content
-                       (list (list :section section-content)))))))))))
+               ,(when section-content
+                      (list :section section-content))))))))))
 
 ;;;
 ;;; Whole thing
