@@ -1,5 +1,12 @@
 (in-package :cl-org-mode)
 
+(define-condition org-error (error)
+  ())
+
+(define-condition org-parse-error (org-error)
+  ((source   :reader source-of   :initarg :source)
+   (line     :reader line-of     :initarg :line)
+   (column   :reader column-of   :initarg :column)))
 
 (defclass org-node (node)
   ((title      :reader title-of      :initarg :title)
