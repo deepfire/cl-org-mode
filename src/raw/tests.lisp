@@ -193,11 +193,10 @@
               (when profile
                 (format t ";;; total context references: ~D~%" total-references))
               (values result total-references))
-            (let ((failure-posn (slot-value (slot-value front 'parser-combinators::context) 'position)))
-              (multiple-value-bind (lineno col lposn rposn line ctx) (string-context failure-posn :around 2)
-                (declare (ignore lposn rposn line))
-                (format t "; ~A at line ~D, col ~D:~%~A~%"
-                        (if successp "partial match" "failure") (1+ lineno) col ctx))))
+            (multiple-value-bind (lineno col lposn rposn line ctx) (string-context (position-of front) :around 2)
+              (declare (ignore lposn rposn line))
+              (format t "; ~A at line ~D, col ~D:~%~A~%"
+                      (if successp "partial match" "failure") (1+ lineno) col ctx)))
         #+nil
         (iter (for (posn lineno hits) in )
               (print-hit posn hits))))))
