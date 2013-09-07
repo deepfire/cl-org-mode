@@ -11,4 +11,4 @@
 	     (:file "cl-org-mode")
 	     )))
   :serial t
-  :depends-on (:alexandria :iterate :cl-org-mode-raw))
+  :depends-on (:alexandria :iterate :cl-org-mode-raw :parser-combinators-debug))
