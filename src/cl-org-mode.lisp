@@ -19,15 +19,7 @@
 (defclass org-document (org-node)
   ())
 
-(defun org-raw-typep (x type)
-  (and (consp x) (member (car x) (ensure-list type))))
 
-(defun org-raw-section-p (x)         (org-raw-typep x :section))
-(defun org-raw-entry-p (x)           (org-raw-typep x :entry))
-(defun org-raw-greater-block-p (x)   (org-raw-typep x '(:block :dynamic-block :basic-drawer :property-drawer)))
-(defun org-raw-property-drawer-p (x) (org-raw-typep x :property-drawer))
-(defun org-raw-keyword-p (x)         (org-raw-typep x :keyword))
-(defun org-raw-attribute-p (x)       (org-raw-typep x :attribute))
 
 (defun make-node (title section children &key status priority tags properties
                                            (type 'org-node))
@@ -44,14 +36,14 @@
     node))
 
 (defun org-dress-node (ast)
-  (assert (eq :entry (car ast)))
+  (assert (cl-org-mode-raw:org-raw-entry-p ast))
   (destructuring-bind (headline section &rest children) (rest ast)
-    (assert (eq :stars (car headline)))
+    (assert (cl-org-mode-raw:org-raw-stars-p headline))
     (destructuring-bind (depth &key title commented quoted todo priority tags)
         (rest headline)
       (declare (ignore depth commented quoted))
       (let ((properties (when (and section
-                                   (org-raw-property-drawer-p (first section)))
+                                   (cl-org-mode-raw:org-raw-property-drawer-p (first section)))
                           (fourth (first section)))))
         (make-node title section (mapcar #'org-dress-node children)
                    :status     todo
@@ -60,9 +52,9 @@
                    :properties properties)))))
 
 (defun org-dress (ast)
-  (assert (eq :org (car ast)))
+  (assert (cl-org-mode-raw:org-raw-p ast))
   (destructuring-bind (header section &rest children) (rest ast)
-    (assert (eq :header (car header)))
+    (assert (cl-org-mode-raw:org-raw-header-p header))
     (destructuring-bind (&key title &allow-other-keys) (rest header)
       (make-node title section (mapcar #'org-dress-node children)
                  :type 'org-document

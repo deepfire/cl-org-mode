@@ -89,6 +89,23 @@
   (hook? (lambda (x)
            (list tag x))
          x))
+
+;;;;
+;;;; Output predicates
+;;;;
+(defun org-raw-typep (x type)
+  (and (consp x) (member (car x) (ensure-list type))))
+
+(defun org-raw-section-p (x)         (org-raw-typep x :section))
+(defun org-raw-stars-p (x)           (org-raw-typep x :stars))
+(defun org-raw-entry-p (x)           (org-raw-typep x :entry))
+(defun org-raw-greater-block-p (x)   (org-raw-typep x '(:block :dynamic-block :basic-drawer :property-drawer)))
+(defun org-raw-property-drawer-p (x) (org-raw-typep x :property-drawer))
+(defun org-raw-keyword-p (x)         (org-raw-typep x :keyword))
+(defun org-raw-attribute-p (x)       (org-raw-typep x :attribute))
+(defun org-raw-header-p (x)          (org-raw-typep x :header))
+(defun org-raw-p (x)                 (org-raw-typep x :org))
+
 ;;;;
 ;;;; The grammar encoded therein roughly approximates http://orgmode.org/worg/dev/org-syntax.html
 ;;;;
