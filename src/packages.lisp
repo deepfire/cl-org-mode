@@ -11,7 +11,6 @@
    #:line-of
    #:column-of
    ;;
-   #:org-document
    #:org-node
    ;;
    #:make-node

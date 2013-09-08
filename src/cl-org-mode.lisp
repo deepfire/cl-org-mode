@@ -16,8 +16,6 @@
    (tags       :reader tags-of       :initarg :tags)
    (properties :reader properties-of :initarg :properties)))
 
-(defclass org-document (org-node)
-  ())
 
 
 
@@ -57,7 +55,7 @@
     (assert (cl-org-mode-raw:org-raw-header-p header))
     (destructuring-bind (&key title &allow-other-keys) (rest header)
       (make-node title section (mapcar #'org-dress-node children)
-                 :type 'org-document
+                 :type 'org-node
                  :properties (rest header)))))
 
 (defun org-parse (org)
