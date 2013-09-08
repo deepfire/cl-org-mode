@@ -21,5 +21,10 @@
    #:tags-of
    #:properties-of
    ;;
+   #:mapc-nodes-preorder
+   #:mapc-edges-preorder
+   #:do-nodes-preorder
+   #:do-edges-preorder
+   ;;
    #:org-dress
    #:org-parse))
