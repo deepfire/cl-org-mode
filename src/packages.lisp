@@ -11,8 +11,10 @@
    #:line-of
    #:column-of
    ;;
-   #:org-node
+   #:org-document
+   #:org-document-options
    ;;
+   #:org-node
    #:make-node
    #:title-of
    #:section-of
@@ -20,6 +22,20 @@
    #:priority-of
    #:tags-of
    #:properties-of
+   ;;
+   #:org-container
+   #:org-named-container
+   #:org-section
+   #:org-properties
+   #:org-block
+   #:org-drawer
+   #:org-keyword
+   ;;
+   #:name-of
+   #:optional-of
+   #:value-of
+   #:parameters-of
+   #:children-of
    ;;
    #:mapc-nodes-preorder
    #:mapc-edges-preorder

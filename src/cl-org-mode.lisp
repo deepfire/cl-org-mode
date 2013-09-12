@@ -16,6 +16,9 @@
    (tags       :reader tags-of       :initarg :tags)
    (properties :reader properties-of :initarg :properties)))
 
+(defclass org-document (org-node)
+  ((options    :reader org-document-options :initarg :options)))
+
 (defun mapc-nodes-preorder (fn node &aux (seen (make-hash-table :test 'eq)))
   (labels ((rec (node)
              (unless (gethash node seen)
@@ -45,44 +48,106 @@
                           ,@body)
                         ,graph))
 
+(defmethod initialize-instance :after ((o org-node) &key out &allow-other-keys)
+  (dolist (child out)
+    (setf (node.in child) o)))
+
 (defun make-node (title section children &key status priority tags properties
                                            (type 'org-node))
-  (let ((node (make-instance type
-                             :title      title
-                             :section    section
-                             :out        children
-                             :status     status
-                             :priority   priority
-                             :tags       tags
-                             :properties properties)))
-    (dolist (c (node.out node))
-      (setf (node.in c) node))
-    node))
+  (make-instance type
+                 :title      title
+                 :section    section
+                 :out        children
+                 :status     status
+                 :priority   priority
+                 :tags       tags
+                 :properties properties))
+
+(defclass org-container ()
+  ((children   :reader children-of   :initarg :children :type 'list)))
+
+(defclass org-named-container (org-container)
+  ((name       :reader name-of       :initarg :name)))
+
+(defclass org-section    (org-container) ())
+(defclass org-properties (org-container) ())
+(defclass org-drawer     (org-named-container) ())
+(defclass org-block      (org-named-container)
+  ((parameters :reader parameters-of :initarg :parameters)))
+
+(defclass org-keyword ()
+  ((name       :reader name-of       :initarg :name)
+   (optional   :reader optional-of   :initarg :optional)
+   (value      :reader value-of      :initarg :value)))
+
+(defun org-dress-property (ast)
+  (destructuring-bind (&key property value) ast
+    (make-instance 'org-keyword :name property :optional nil :value value)))
+
+(defun call-with-raw-section-node-properties (section fn)
+  (multiple-value-bind (drawer filtered-section)
+      (if (cl-org-mode-raw:org-raw-property-drawer-p (second section))
+          (values (second section) (cons (first section) (cddr section)))
+          (values nil              section))
+    (destructuring-bind (&key property-drawer contents) drawer
+      (declare (ignore property-drawer))
+      (funcall fn (mapcar #'org-dress-property contents) filtered-section))))
+
+(defmacro with-raw-section-node-properties ((properties filtered-section) section &body body)
+  `(call-with-raw-section-node-properties ,section (lambda (,properties ,filtered-section)
+                                                     ,@body)))
+
+(defun org-dress-element (ast)
+  (if (stringp ast)
+      ast
+      (destructuring-bind (kind name &key parameters contents optional value) ast
+        (case kind
+          ((:block :dynamic-block)
+           (make-instance 'org-block        :name name :children (children-of (org-dress-section contents)) :parameters parameters))
+          (:basic-drawer
+           (make-instance 'org-basic-drawer :name name :children (children-of (org-dress-section contents))))
+          (:property-drawer
+           (make-instance 'org-properties              :children (mapcar #'org-dress-property contents)))
+          ((:keyword :attribute)
+           (make-instance 'org-keyword      :name name :optional optional :value value))
+          (t
+           (error "~@<Unexpected AST in place of element: ~S.~:@>" (first ast)))))))
+
+(defun org-dress-section (ast)
+  (make-instance 'org-section :children (mapcar #'org-dress-element (rest ast))))
 
 (defun org-dress-node (ast)
   (assert (cl-org-mode-raw:org-raw-entry-p ast))
   (destructuring-bind (headline section &rest children) (rest ast)
     (assert (cl-org-mode-raw:org-raw-stars-p headline))
-    (destructuring-bind (depth &key title commented quoted todo priority tags)
-        (rest headline)
+    (assert (or (null section)
+                (cl-org-mode-raw:org-raw-section-p section)))
+    (destructuring-bind (depth &key title commented quoted todo priority tags) (rest headline)
       (declare (ignore depth commented quoted))
-      (let ((properties (when (and section
-                                   (cl-org-mode-raw:org-raw-property-drawer-p (first section)))
-                          (fourth (first section)))))
-        (make-node title section (mapcar #'org-dress-node children)
+      (with-raw-section-node-properties (node-properties section) section
+        (make-node title (when section
+                           (org-dress-section section))
+                   (mapcar #'org-dress-node children)
                    :status     todo
                    :priority   priority
                    :tags       tags
-                   :properties properties)))))
+                   :properties node-properties)))))
 
 (defun org-dress (ast)
   (assert (cl-org-mode-raw:org-raw-p ast))
   (destructuring-bind (header section &rest children) (rest ast)
     (assert (cl-org-mode-raw:org-raw-header-p header))
+    (assert (or (null section)
+                (cl-org-mode-raw:org-raw-section-p section)))
     (destructuring-bind (&key title &allow-other-keys) (rest header)
-      (make-node title section (mapcar #'org-dress-node children)
-                 :type 'org-node
-                 :properties (rest header)))))
+      (with-raw-section-node-properties (node-properties section) section
+        (make-instance 'org-document
+                       :title title
+                       :section (when section
+                                  (org-dress-section section))
+                       :out (mapcar #'org-dress-node children)
+                       :properties node-properties
+                       :options (remove-from-plist (rest header) :title :startup-all))))))
 
 (defun org-parse (org)
   (let ((text (etypecase org
