@@ -12,3 +12,5 @@
         :initform nil
         :documentation "A list of immediate child nodes. Warning: potentially a free-form graph here."))
   (:documentation "Base class for all nodes"))
+
+(defgeneric org-present (kind object stream))

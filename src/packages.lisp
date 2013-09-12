@@ -43,4 +43,5 @@
    #:do-edges-preorder
    ;;
    #:org-dress
+   #:org-present
    #:org-parse))

@@ -8,6 +8,32 @@
    (line     :reader line-of     :initarg :line)
    (column   :reader column-of   :initarg :column)))
 
+;;;;
+;;;  Dressing and presentation
+;;
+(defmethod org-present ((kind (eql :flat)) (o string) s)
+  (write-string o s))
+
+(defclass org-document (org-node)
+  ((options    :reader org-document-options :initarg :options)))
+
+(defun org-present-flat-properties (properties stream)
+  (write-line ":PROPERTIES:" stream)
+  (dolist (p properties)
+    (format stream ":~A:~:[~; ~:*~A~]~%" (name-of p) (value-of p)))
+  (write-line ":END:" stream))
+
+(defmethod org-present ((kind (eql :flat)) (o org-document) s)
+  (with-slots (options title properties section) o
+    (iter (for (option value . rest) on options by #'cddr)
+          (format s "#+~A: ~A~%" (symbol-name option) value))
+    (format s "#+TITLE: ~A~%" title)
+    (when properties
+      (org-present-flat-properties properties s))
+    (org-present :flat section s)
+    (dolist (c (node.out o))
+      (org-present :flat c s))))
+
 (defclass org-node (node)
   ((title      :reader title-of      :initarg :title)
    (section    :reader section-of    :initarg :section)
@@ -16,8 +42,6 @@
    (tags       :reader tags-of       :initarg :tags)
    (properties :reader properties-of :initarg :properties)))
 
-(defclass org-document (org-node)
-  ((options    :reader org-document-options :initarg :options)))
 
 (defun mapc-nodes-preorder (fn node &aux (seen (make-hash-table :test 'eq)))
   (labels ((rec (node)
@@ -47,6 +71,15 @@
   `(mapc-edges-preorder (lambda (,from ,to)
                           ,@body)
                         ,graph))
+(defmethod org-present ((kind (eql :flat)) (o org-node) s)
+  (with-slots (status priority title tags properties section) o
+    (format s "*~:[~; ~:*~A~]~:[~; ~:*~A~] ~A~:[~; ~:*~A~]~%"
+            status priority title tags)
+    (when properties
+      (org-present-flat-properties properties s))
+    (org-present :flat section s)
+    (dolist (c (node.out o))
+      (org-present :flat c s))))
 
 (defmethod initialize-instance :after ((o org-node) &key out &allow-other-keys)
   (dolist (child out)
@@ -75,10 +108,34 @@
 (defclass org-block      (org-named-container)
   ((parameters :reader parameters-of :initarg :parameters)))
 
+(defmethod org-present ((kind (eql :flat)) (o org-container) s)
+  (dolist (c (children-of o))
+    (org-present :flat c s)))
+
+(defmethod org-present ((kind (eql :flat)) (o org-properties) s)
+  (format s ":PROPERTIES:~%")
+  (call-next-method)
+  (format s ":END:~%"))
+
+(defmethod org-present ((kind (eql :flat)) (o org-drawer) s)
+  (with-slots (name) o
+    (format s ":~A:~%" name)
+    (call-next-method)
+    (format s ":END:~%")))
+
+(defmethod org-present ((kind (eql :flat)) (o org-block) s)
+  (with-slots (name parameters) o
+    (format s "#+BEGIN_~A:~:[~;~:* ~A~]~%" name parameters)
+    (call-next-method)
+    (format s "#+END_~A~%" name)))
+
 (defclass org-keyword ()
   ((name       :reader name-of       :initarg :name)
    (optional   :reader optional-of   :initarg :optional)
    (value      :reader value-of      :initarg :value)))
+
+(defmethod org-present ((kind (eql :flat)) (o org-keyword) s)
+  (format s "#+~A:~:[~;~:* [~A]~] ~A~%" (name-of o) (optional-of o) (value-of o)))
 
 (defun org-dress-property (ast)
   (destructuring-bind (&key property value) ast
