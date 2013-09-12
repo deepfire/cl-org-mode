@@ -21,7 +21,7 @@ org-headline-tag       := :commented t
                         | :todo <keyword>
                         | :priority <string>
 org-entry-tags         := :tags ( <string>* )
-org-section            := ( :section org-section-part )
+org-section            := ( :section org-section-component* )
 org-section-component  := org-element
                         | org-greater-element
                         | org-affiliated-keyword
@@ -33,7 +33,7 @@ org-greater-block      := ( :block         <string> [ :parameters <string> ] :co
 org-dynamic-block      := ( :dynamic-block <string> [ :parameters <string> ] :contents org-section )
 org-drawer             := org-basic-drawer
                         | org-property-drawer
-org-basic-drawer       := ( :basic-drawer    <string> :contents ( org-section* ) )
+org-basic-drawer       := ( :basic-drawer    <string> :contents org-section )
 org-property-drawer    := ( :property-drawer <string> :contents ( org-property* ) )
 org-property           := ( :property <string> :value <string> )
 org-affiliated-keyword := org-keyword

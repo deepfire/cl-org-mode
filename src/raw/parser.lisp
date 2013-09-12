@@ -193,7 +193,7 @@
                  (org-affiliated-keyword))
                 (org-boundary :for kind)))
    (when-let ((filtered-content (remove "" content :test #'equal)))
-     (list :section filtered-content))))
+     (cons :section filtered-content))))
 
 ;;;
 ;;;  Greater element   http://orgmode.org/worg/dev/org-syntax.html#Greater_Elements
@@ -412,7 +412,7 @@
     (named-seq*
      (<- mix (opt* (org-section :kind :entry-section)))
      (multiple-value-bind (raw-keywords section-content)
-         (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (second mix))
+         (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (rest mix))
        (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
          (when trace
            (format t ";;; header options:~{ ~S~}~%" keyword-plist)
@@ -438,7 +438,7 @@
                           (when (or unknown conflicted)
                             (list :startup-all (keywords-as-flags all)))))
                ,(when section-content
-                      (list :section section-content))))))))))
+                      (cons :section section-content))))))))))
 
 ;;;
 ;;; Whole thing
