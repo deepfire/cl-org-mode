@@ -71,6 +71,7 @@
   `(mapc-edges-preorder (lambda (,from ,to)
                           ,@body)
                         ,graph))
+
 (defmethod org-present ((kind (eql :flat)) (o org-node) s)
   (with-slots (status priority title tags properties section) o
     (format s "*~:[~; ~:*~A~]~:[~; ~:*~A~] ~A~:[~; ~:*~A~]~%"
@@ -218,3 +219,31 @@
             (let ((failure-posn (parser-combinators:position-of front)))
               (multiple-value-bind (line column) (parser-combinators-debug:string-position failure-posn)
                 (error 'org-parse-error :source org :line line :column column))))))))
+
+;;;
+;;; Convenience package for happy WITH-SLOTS usage..
+;;;
+(defpackage :cl-org-mode-slots
+  (:import-from
+   #:cl-org-mode
+   ;; node
+   #:in #:out
+   ;; org-node
+   #:title #:section #:status #:priority #:tags #:properties
+   ;; document
+   #:options
+   ;; elements
+   #:children
+   #:parameters
+   #:name #:value #:optional)
+  (:export
+   ;; node
+   #:in #:out
+   ;; org-node
+   #:title #:section #:status #:priority #:tags #:properties
+   ;; document
+   #:options
+   ;; elements
+   #:children
+   #:parameters
+   #:name #:value #:optional))
