@@ -23,8 +23,8 @@
 
 (defun org-present-flat-properties (properties stream)
   (write-line ":PROPERTIES:" stream)
-  (dolist (p properties)
-    (format stream ":~A:~:[~; ~:*~A~]~%" (name-of p) (value-of p)))
+  (iter (for (name . value) in properties)
+        (format stream ":~A:~:[~; ~:*~A~]~%" name value))
   (write-line ":END:" stream))
 
 (defmethod org-present ((kind (eql :flat)) (o org-document) s)
@@ -155,7 +155,11 @@
           (values nil              section))
     (destructuring-bind (&key property-drawer contents) drawer
       (declare (ignore property-drawer))
-      (funcall fn (mapcar #'org-dress-property contents) filtered-section))))
+      (funcall fn (mapcar (lambda (ast)
+                            (destructuring-bind (&key property value) ast
+                              (cons property value)))
+                          contents)
+               filtered-section))))
 
 (defmacro with-raw-section-node-properties ((properties filtered-section) section &body body)
   `(call-with-raw-section-node-properties ,section (lambda (,properties ,filtered-section)
