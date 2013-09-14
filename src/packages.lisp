@@ -5,8 +5,12 @@
    #:node.in
    #:node.out
    ;;
+   #:org-condition
    #:org-error
+   #:org-simple-error
    #:org-parse-error
+   #:org-warning
+   #:org-simple-warning
    #:source-of
    #:line-of
    #:column-of

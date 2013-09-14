@@ -1,7 +1,11 @@
 (in-package :cl-org-mode)
 
-(define-condition org-error (error)
-  ())
+(define-condition org-condition ()                      ())
+(define-condition org-error     (org-condition error)   ())
+(define-condition org-warning   (org-condition warning) ())
+
+(define-simple-error   org-error)
+(define-simple-warning org-warning)
 
 (define-condition org-parse-error (org-error)
   ((source   :reader source-of   :initarg :source)
@@ -172,7 +176,7 @@
           ((:keyword :attribute)
            (make-instance 'org-keyword      :name name :optional optional :value value))
           (t
-           (error "~@<Unexpected AST in place of element: ~S.~:@>" (first ast)))))))
+           (org-error "~@<Unexpected AST in place of element: ~S.~:@>" (first ast)))))))
 
 (defun org-dress-section (ast)
   (make-instance 'org-section :children (mapcar #'org-dress-element (rest ast))))
