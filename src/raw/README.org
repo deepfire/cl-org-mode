@@ -22,20 +22,23 @@
   * based on PARSER-COMBINATORS, by Jakub Higersberger (thank you!)
   * has a built-in profiler
 
-* Testing the new parser
+* Testing
 
   It would suffice to just do:
 
   #+BEGIN_SRC common-lisp
-  (require :cl-org-mode-raw-tests)
+  (require :cl-org-mode-tests)
+  (asdf:oos 'asdf:test-op :cl-org-mode)
+  #+END_SRC
+
+  ..although it would test the mid-layer parser as well.
+
+  If you feel more adventurous, and would like to run your files
+  through the test suite:
+
+  #+BEGIN_SRC common-lisp
   (cl-org-mode-raw-tests:test '(#p"/path/to/your/org-testcase-1.lisp"
                                 #p"/path/to/your/org-testcase-2.lisp"))
   #+END_SRC
 
   It parses all 28 org files on my computer : -)
-
-  Additionally, there is a limited amount of canned testcases for ORG-ENTRY:
-
-  #+BEGIN_SRC common-lisp
-  (cl-org-mode-raw-tests:test-org-entry)
-  #+END_SRC
