@@ -28,11 +28,11 @@
   (write-line ":END:" stream))
 
 (defmethod org-present ((kind (eql :flat)) (o org-document) s)
-  (with-slots (options title properties section) o
+  (with-slots (options title section) o
     (iter (for (option value . rest) on options by #'cddr)
           (format s "#+~A: ~A~%" (symbol-name option) value))
     (format s "#+TITLE: ~A~%" title)
-    (when properties
+    (when-let ((properties (properties-of o)))
       (org-present-flat-properties properties s))
     (org-present :flat section s)
     (dolist (c (node.out o))
@@ -44,11 +44,14 @@
    (status     :reader status-of     :initarg :status)
    (priority   :reader priority-of   :initarg :priority)
    (tags       :reader tags-of       :initarg :tags)
-   (properties :reader properties-of :initarg :properties)))
+   (static-properties :reader static-properties-of :initarg :static-properties)))
 
 (define-print-object-method ((o org-node) title out)
     "~S~:[~; ~:*~D children~]" title (when (plusp (length out))
                                        (length out)))
+
+(defmethod properties-of ((o org-node))
+  (static-properties-of o))
 
 (defun mapc-nodes-preorder (fn node &aux (seen (make-hash-table :test 'eq)))
   (labels ((rec (node)
@@ -80,10 +83,10 @@
                         ,graph))
 
 (defmethod org-present ((kind (eql :flat)) (o org-node) s)
-  (with-slots (status priority title tags properties section) o
+  (with-slots (status priority title tags section) o
     (format s "*~:[~; ~:*~A~]~:[~; ~:*~A~] ~A~:[~; ~:*~A~]~%"
             status priority title tags)
-    (when properties
+    (when-let ((properties (properties-of o)))
       (org-present-flat-properties properties s))
     (org-present :flat section s)
     (dolist (c (node.out o))
@@ -93,7 +96,7 @@
   (dolist (child out)
     (setf (node.in child) o)))
 
-(defun make-node (title section children &key status priority tags properties
+(defun make-node (title section children &key status priority tags static-properties
                                            (type 'org-node))
   (make-instance type
                  :title      title
@@ -102,7 +105,7 @@
                  :status     status
                  :priority   priority
                  :tags       tags
-                 :properties properties))
+                 :static-properties static-properties))
 
 (defclass org-container ()
   ((children   :reader children-of   :initarg :children :type 'list)))
@@ -145,10 +148,6 @@
 (defmethod org-present ((kind (eql :flat)) (o org-keyword) s)
   (format s "#+~A:~:[~;~:* [~A]~] ~A~%" (name-of o) (optional-of o) (value-of o)))
 
-(defun org-dress-property (ast)
-  (destructuring-bind (&key property value) ast
-    (make-instance 'org-keyword :name property :optional nil :value value)))
-
 (defun call-with-raw-section-node-properties (section fn)
   (multiple-value-bind (drawer filtered-section)
       (if (cl-org-mode-raw:org-raw-property-drawer-p (second section))
@@ -161,6 +160,10 @@
 (defmacro with-raw-section-node-properties ((properties filtered-section) section &body body)
   `(call-with-raw-section-node-properties ,section (lambda (,properties ,filtered-section)
                                                      ,@body)))
+
+(defun org-dress-property (ast)
+  (destructuring-bind (&key property value) ast
+    (make-instance 'org-keyword :name property :optional nil :value value)))
 
 (defun org-dress-element (ast)
   (if (stringp ast)
@@ -196,7 +199,7 @@
                    :status     todo
                    :priority   priority
                    :tags       tags
-                   :properties node-properties)))))
+                   :static-properties node-properties)))))
 
 (defun org-dress (ast)
   (assert (cl-org-mode-raw:org-raw-p ast))
@@ -211,7 +214,7 @@
                        :section (when section
                                   (org-dress-section section))
                        :out (mapcar #'org-dress-node children)
-                       :properties node-properties
+                       :static-properties node-properties
                        :options (remove-from-plist (rest header) :title :startup-all))))))
 
 (defun org-parse (org)
@@ -236,7 +239,7 @@
    ;; node
    #:in #:out
    ;; org-node
-   #:title #:section #:status #:priority #:tags #:properties
+   #:title #:section #:status #:priority #:tags #:static-properties
    ;; document
    #:options
    ;; elements
@@ -247,7 +250,7 @@
    ;; node
    #:in #:out
    ;; org-node
-   #:title #:section #:status #:priority #:tags #:properties
+   #:title #:section #:status #:priority #:tags #:static-properties
    ;; document
    #:options
    ;; elements

@@ -25,6 +25,8 @@
    #:status-of
    #:priority-of
    #:tags-of
+   #:static-properties-of
+   #:dynamic-properties-of
    #:properties-of
    ;;
    #:org-container

@@ -14,3 +14,6 @@
   (:documentation "Base class for all nodes"))
 
 (defgeneric org-present (kind object stream))
+
+(defgeneric properties-of (object))
+(defgeneric dynamic-properties-of (object kind))
