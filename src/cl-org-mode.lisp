@@ -42,6 +42,9 @@
    (tags       :reader tags-of       :initarg :tags)
    (properties :reader properties-of :initarg :properties)))
 
+(define-print-object-method ((o org-node) title out)
+    "~S~:[~; ~:*~D children~]" title (when (plusp (length out))
+                                       (length out)))
 
 (defun mapc-nodes-preorder (fn node &aux (seen (make-hash-table :test 'eq)))
   (labels ((rec (node)
