@@ -7,6 +7,7 @@
 	    :components
 	    ((:file "packages")
 	     (:file "protocol")
+             (:file "utils")
 	     (:file "cl-org-mode")
 	     )))
   :serial t
