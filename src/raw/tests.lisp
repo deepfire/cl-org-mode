@@ -115,9 +115,7 @@
                                    trailing-newline-p
                                  &aux
                                    (*debug-mode* debug))
-  (labels ((strconcat* (&rest xs)
-             (strconcat xs))
-           (generate-overhead-org (depth text-length)
+  (labels ((generate-overhead-org (depth text-length)
              (iter (for i below (1+ depth))
                    (when (plusp i)
                      (collecting (strconcat* (make-string i :initial-element #\*)

@@ -5,6 +5,8 @@
    ;;
    #:+newline-string+
    #:strconcat
+   #:strconcat*
+   #:unzip
    ;;
    #:org-element-line
    #:org-element

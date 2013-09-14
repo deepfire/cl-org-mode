@@ -1,20 +1,6 @@
 (in-package :cl-org-mode-raw)
 
 ;;;
-;;; Tools
-(defun unzip (fn sequence &key (key #'identity))
-  (iter (for elt in sequence)
-        (if (funcall fn (funcall key elt))
-            (collect elt into yes)
-            (collect elt into no))
-        (finally (return (values yes no)))))
-
-(define-constant +newline-string+ (coerce #(#\Newline) 'string) :test #'equal)
-
-(defun strconcat (xs)
-  (apply #'concatenate 'string xs))
-
-;;;
 ;;; Primitives
 (defun char-bag (bag)
   (sat (lambda (x) (find x bag :test #'char=))))
