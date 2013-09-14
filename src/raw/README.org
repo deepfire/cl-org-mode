@@ -20,7 +20,7 @@
     - paragraphs
     - affiliated keywords
   * based on PARSER-COMBINATORS, by Jakub Higersberger (thank you!)
-  * has a built-in profiler, in src/new-parser-tests.lisp
+  * has a built-in profiler
 
 * Testing the new parser
 
