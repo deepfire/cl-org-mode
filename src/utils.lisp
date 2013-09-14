@@ -33,6 +33,15 @@ PRINT-UNREADABLE-OBJECT, with TYPE and IDENTITY passed to it."
   (apply #'format stream (simple-condition-format-control condition) (simple-condition-format-arguments condition)))
 
 ;; from pergamum
+(defmacro define-simple-condition (base-type &key object-initarg (simple-condition-type 'simple-error) (signaler 'error))
+  (let ((type (format-symbol t "SIMPLE-~A" base-type)))
+    `(progn
+       (define-condition ,type (,base-type ,simple-condition-type)
+         ()
+         (:report report-simple-condition))
+       (defun ,base-type (,@(when object-initarg `(o)) format-control &rest format-arguments)
+         (,signaler ',type ,@(when object-initarg `(,object-initarg o)) :format-control format-control :format-arguments format-arguments)))))
+
 (defmacro define-simple-error (base-type &key object-initarg)
   "Define a simple error subclassing from BASE-TYPE and a corresponding
 function, analogous to ERROR, but also optionally taking the object 
@@ -41,10 +50,14 @@ keyword. The name of the simple error is constructed by prepending
 'SIMPLE-' to BASE-TYPE.
 Whether or not the error signaller will require and pass the
 object is specified by OBJECT-INITARG being non-NIL."
-  (let ((type (format-symbol t "SIMPLE-~A" base-type)))
-    `(progn
-       (define-condition ,type (,base-type simple-error)
-         ()
-         (:report report-simple-condition))
-       (defun ,base-type (,@(when object-initarg `(o)) format-control &rest format-arguments)
-         (error ',type ,@(when object-initarg `(,object-initarg o)) :format-control format-control :format-arguments format-arguments)))))
+  `(define-simple-condition ,base-type :object-initarg ,object-initarg :simple-condition-type simple-error :signaler error))
+
+(defmacro define-simple-warning (base-type &key object-initarg)
+  "Define a simple warning subclassing from BASE-TYPE and a corresponding
+function, analogous to WARN, but also optionally taking the object 
+against which to warn, and passing it to WARN via the OBJECT-INITARG
+keyword. The name of the simple warning is constructed by prepending
+'SIMPLE-' to BASE-TYPE.
+Whether or not the error signaller will require and pass the
+object is specified by OBJECT-INITARG being non-NIL."
+  `(define-simple-condition ,base-type :object-initarg ,object-initarg :simple-condition-type simple-warning :signaler warn))
