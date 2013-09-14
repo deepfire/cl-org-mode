@@ -1,0 +1,22 @@
+#+startup: hidestars odd
+#+title: Example Org
+
+* Dag sample :a:b:c:
+
+  Some text.
+
+*** Left
+    :PROPERTIES:
+    :CL-ORG-MODE-CHILD-0: 984CC6FEF91784EBA9B79C6D5CDAAC4E85D7037F2D6E8C7597FA3618B57C93DB
+    :END:
+
+     More text.
+
+*** Right
+
+    Some more text.
+
+***** Diamond pin
+
+      The ultimate text.
+

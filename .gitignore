@@ -13,6 +13,7 @@
 *.wx32fsl
 
 .bindings
+Makefile
 
 # win32
 *.manifest

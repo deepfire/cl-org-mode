@@ -1,29 +1,37 @@
-(in-package :cl-org-mode-raw-tests)
+(defpackage :cl-org-mode-tests-raw
+  (:use :cl
+        :alexandria
+        :iterate
+        :parser-combinators
+        :parser-combinators-debug
+	:cl-org-mode-raw))
+
+(in-package :cl-org-mode-tests-raw)
 
 (defparameter *org-entry-testcases*
   '( ;; 0
-    ("* a" (:ENTRY (:STARS 1 :TITLE "a")))
+    ("* a" (:ENTRY (:STARS 1 :TITLE "a") NIL))
     ;; 1
     ("* a
-"          (:ENTRY (:STARS 1 :TITLE "a")))
+"          (:ENTRY (:STARS 1 :TITLE "a") NIL))
     ;; 2
     ("* a
    a text" (:ENTRY (:STARS 1 :TITLE "a")
-            (:SECTION ("   a text
-"))))
+            (:SECTION "   a text
+")))
     ;; 3
     ("* a
 ** b
-"          (:ENTRY (:STARS 1 :TITLE "a")
-            (:ENTRY (:STARS 2 :TITLE "b"))))
+"          (:ENTRY (:STARS 1 :TITLE "a") NIL
+            (:ENTRY (:STARS 2 :TITLE "b") NIL)))
     ;; 4
     ("* a
    a text
 ** b
 "          (:ENTRY (:STARS 1 :TITLE "a")
-            (:SECTION ("   a text
-"))
-            (:ENTRY (:STARS 2 :TITLE "b"))))
+            (:SECTION "   a text
+")
+            (:ENTRY (:STARS 2 :TITLE "b") NIL)))
     ;; 5
     ("* a
 
@@ -33,22 +41,22 @@
    b text
 
 "          (:ENTRY (:STARS 1 :TITLE "a")
-            (:SECTION ("
+            (:SECTION "
   a text
 
-"))
+")
             (:ENTRY (:STARS 2 :TITLE "b")
                     (:SECTION
-                     ("   b text
+                     "   b text
 
-")))))
+"))))
     ("* a
 
 ** b
 "          (:ENTRY (:STARS 1 :TITLE "a")
-            (:SECTION ("
-"))
-            (:ENTRY (:STARS 2 :TITLE "b"))))))
+            (:SECTION "
+")
+            (:ENTRY (:STARS 2 :TITLE "b") NIL)))))
 
 (defun test-org-entry (&optional trace debug
                        &aux (*debug-mode* debug))
@@ -65,6 +73,8 @@
                      (list '_ n input output))))))
            *org-entry-testcases*
            (iota (length *org-entry-testcases*)))))
+
+(rtest:deftest :raw/org-entry (test-org-entry))
 
 ;;;
 ;;; Testing
@@ -171,7 +181,8 @@
              (show-string-position (format nil "~D hits" hits)
                                    string posn cache)))
       (declare (ignorable #'print-hit))
-      (format t ";;;~%;;;~%;;; trying: ~S~%" filename)
+      (when debug
+        (format t ";;;~%;;;~%;;; trying: ~S~%" filename))
       (multiple-value-bind (result vector-context successp front seen-positions)
           (parse-string* (funcall parser) string)
         (declare (ignore vector-context))
@@ -217,5 +228,13 @@
             (incf total-contexts ncontexts))
           (when success
             (incf succeeded))))))
-  (format t ";; total contexts: ~D~%" total-contexts)
+  (format t "~&;; total contexts: ~D~%" total-contexts)
   (format t ";; success rate: ~D/~D~%" succeeded (length org-files)))
+
+(defvar *org-files* (mapcar (lambda (f)
+                              (asdf:system-relative-pathname (asdf:find-system :cl-org-mode) f))
+                            '(#p"doc/raw-parser.org"
+                              #p"src/raw/README.org"
+                              #p"t/example.org")))
+
+(rtest:deftest :raw/org-files (test *org-files*) nil)

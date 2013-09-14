@@ -13,3 +13,8 @@
 	     )))
   :serial t
   :depends-on (:alexandria :iterate :cl-org-mode-raw :parser-combinators-debug))
+
+(defmethod asdf:perform ((op asdf:test-op)
+                         (c (eql (asdf:find-system :cl-org-mode))))
+  (or (funcall (intern "DO-TESTS" (find-package "RTEST")))
+      (error "TEST-OP failed for CL-ORG-MODE-TESTS")))
