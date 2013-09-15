@@ -27,7 +27,11 @@
   (with-slots (options title section) o
     (iter (for (option value . rest) on options by #'cddr)
           (indent *present-depth* s)
-          (format s "#+~A: ~A~%" (symbol-name option) value))
+          (format s "#+~A:" (symbol-name option))
+          (if (eq option :startup)
+              (format s "~{ ~A~}" (mapcar #'car (plist-alist value)))
+              (format s " ~A" value))
+          (terpri s))
     (indent *present-depth* s)
     (format s "#+TITLE: ~A~%" title)
     (when-let ((properties (properties-of o)))
@@ -51,7 +55,7 @@
   (with-slots (status priority title tags section) o
     (dotimes (i *present-depth*)
       (write-char #\* s))
-    (format s "*~:[~; ~:*~A~]~:[~; ~:*~A~] ~A~:[~; ~:*~A~]~%"
+    (format s "*~:[~; ~:*~A~]~:[~; ~:*~A~] ~A~:[~; ~:*:~{~A:~}~]~%"
             status priority title tags)
     (when-let ((properties (properties-of o)))
       (org-present-properties properties *present-depth* s))
