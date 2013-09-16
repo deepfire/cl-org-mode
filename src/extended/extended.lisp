@@ -136,6 +136,10 @@
         (collect (cons (strconcat* +child-property-prefix+ (write-to-string i :base 10))
                        (write-to-string (hash-of c) :base #x10)))))
 
+(defmethod org-present :around (kind (o org-document) stream)
+  (with-hash-cache ()
+    (call-next-method)))
+
 ;;;
 ;;; The restorer
 (defun org-dress-node-extended (node)
