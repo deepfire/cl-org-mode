@@ -33,11 +33,3 @@
    #:org-raw-attribute-p
    #:org-raw-header-p
    #:org-raw-p))
-
-(defpackage :cl-org-mode-raw-tests
-  (:use :common-lisp :alexandria :iterate
-        :parser-combinators :parser-combinators-debug
-        :cl-org-mode-raw)
-  (:export
-   #:test-org-entry
-   #:test))

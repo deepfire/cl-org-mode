@@ -1,4 +1,4 @@
-(defpackage :cl-org-mode-tests-raw
+(defpackage :cl-org-mode-raw-tests
   (:use :cl
         :alexandria
         :iterate
@@ -6,7 +6,7 @@
         :parser-combinators-debug
 	:cl-org-mode-raw))
 
-(in-package :cl-org-mode-tests-raw)
+(in-package :cl-org-mode-raw-tests)
 
 (defparameter *org-entry-testcases*
   '( ;; 0
