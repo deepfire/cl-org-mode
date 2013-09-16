@@ -6,5 +6,6 @@
   (:export
    ;;
    #:hash-of
+   #:with-hash-cache
    ;;
    #:org-parse-extended))

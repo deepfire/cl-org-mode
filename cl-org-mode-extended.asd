@@ -13,3 +13,8 @@
                        ))
 	     )))
   :depends-on (:cl-org-mode :ironclad-text))
+
+(defmethod asdf:perform ((op asdf:test-op)
+                         (c (eql (asdf:find-system :cl-org-mode-extended))))
+  (or (funcall (intern "DO-TESTS" (find-package "RTEST")))
+      (error "TEST-OP failed for CL-ORG-MODE-EXTENDED-TESTS")))
