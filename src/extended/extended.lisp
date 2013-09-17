@@ -21,6 +21,14 @@
 ;;; Hashing
 (defparameter *debug-hash* nil)
 
+(defmacro with-hash-debug (() &body body)
+  `(let ((*debug-hash* 0))
+     ,@body))
+
+(defun print-spaces (n)
+  (dotimes (i n)
+    (write-char #\Space *debug-io*)))
+
 (defmethod hash-of ((o org-node))
   (let ((*package* (find-package :common-lisp))
         (*print-base* #x10))
@@ -35,30 +43,35 @@
                   (terpri stream))
                 (write-tag (name &rest xs)
                   (when *debug-hash*
-                    (apply #'write-tag-to *standard-output* name xs))
+                    (print-spaces *debug-hash*)
+                    (apply #'write-tag-to *debug-io* name xs))
                   (apply #'write-tag-to s name xs)))
          (with-slots (title section out) o
            (declare (string title)
                     ((or null org-section) section)
                     (list out))
            (write-tag "title" title)
-           (iter (for (name . value) in (properties-of o))
-                 (declare (string name)
-                          ((or null string) value))
-                 (write-tag "prop" name value))
-           (when section
-             (write-tag "sectn" (hash-of section)))
-           (when out
-             (dolist (c out)
-               (with-slots (status priority tags) c
-                 (declare ((or null string) status priority)
-                          (list tags))
-                 (assert (every #'stringp tags))
-                 (let ((child-desc (format nil "child ~X~:[~;~:* stat ~S~]~:[~;~:* prio ~S~]~:[~;~:* tags~{ ~S~}~]~%"
-                                           (hash-of c) status priority tags)))
-                   (when *debug-hash*
-                     (write-string child-desc))
-                   (write-string child-desc s)))))))))))
+           (let ((*debug-hash* (when *debug-hash*
+                                 (+ 4 *debug-hash*))))
+             (iter (for (name . value) in (properties-of o))
+                   (declare (string name)
+                            ((or null string) value))
+                   (write-tag "prop" name value))
+             (when section
+               (write-tag "sectn" (hash-of section)))
+             (when out
+               (dolist (c out)
+                 (with-slots (status priority tags) c
+                   (declare ((or null string) status priority)
+                            (list tags))
+                   (assert (every #'stringp tags))
+                   (let ((child-desc (format nil " ~X~:[~;~:* stat ~S~]~:[~;~:* prio ~S~]~:[~;~:* tags~{ ~S~}~]~%"
+                                             (hash-of c) status priority tags)))
+                     (when *debug-hash*
+                       (print-spaces *debug-hash*)
+                       (format *debug-io* "child ~S~A" (title-of c) child-desc))
+                     (write-string "child" s)
+                     (write-string child-desc s))))))))))))
 
 (defmethod hash-of ((o org-section))
   (let ((*package* (find-package :common-lisp))
