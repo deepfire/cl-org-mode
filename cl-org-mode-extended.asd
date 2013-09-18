@@ -9,6 +9,8 @@
                       :serial t
                       :components
                       ((:file "packages")
+                       (:file "conditions")
+                       (:file "hash")
                        (:file "extended")
                        ))
 	     )))
