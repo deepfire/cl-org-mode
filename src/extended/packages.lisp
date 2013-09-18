@@ -7,5 +7,6 @@
    ;;
    #:hash-of
    #:with-hash-cache
+   #:clear-hash-cache
    ;;
    #:org-parse-extended))

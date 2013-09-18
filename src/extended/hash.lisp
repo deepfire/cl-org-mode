@@ -99,6 +99,11 @@
           (gethash hash hash->node) node))
   hash)
 
+(defun clear-hash-cache (&optional (cache *hash-cache*))
+  (with-slots (node->hash hash->node) cache
+    (clrhash hash->node)
+    (clrhash node->hash)))
+
 (defmethod hash-of :around ((o org-node))
   (let ((cache *hash-cache*))
     (or (gethash o (slot-value cache 'node->hash))
