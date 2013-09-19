@@ -36,24 +36,23 @@
                      (unless child
                        (org-object-error "~@<Node ~S: missing child number ~S, hash ~S.~:@>" node i hash))
                      (collect child))))
-           (restore-children-dag (node)
+           (restore-children-links-from-properties (node)
              (multiple-value-bind (child-prop-ptrs rest)
                  (unzip (curry #'starts-with-subseq +child-property-prefix+)
                         (static-properties-of node) :key #'car)
-               (setf (slot-value node 'static-properties) rest)
                (let* ((property-referenced-children (node-property-children node child-prop-ptrs))
-                      (unlinked-children (set-difference property-referenced-children (node.out node)))
-                      (unpropertied-children (set-difference (node.out node) property-referenced-children)))
-                 (dolist (c unlinked-children)
-                   (push node (node.in c)))
-                 (cond
-                   (unpropertied-children
-                    (org-object-warning "~@<Node ~S: incomplete child properties: following children have no corresponding properties:~{ ~S~}.~:@>"
-                                        node unpropertied-children)
-                    (appendf (node.out node) unlinked-children))
-                   (t
-                    (setf (node.out node) property-referenced-children)))))))
-    (restore-children-dag node)))
+                      (statically-unlinked-children (set-difference property-referenced-children (node.out node)))
+                      (property-unlinked-children (set-difference (node.out node) property-referenced-children)))
+                 (setf (slot-value node 'static-properties) rest)
+                 (dolist (c statically-unlinked-children)
+                   (push node (node.in c))
+                   (push c (node.out node)))
+                 (when property-unlinked-children
+                   (org-object-warning "~@<Node ~S: incomplete child properties: following children have no corresponding properties:~{ ~S~}.~:@>"
+                                       node property-unlinked-children))
+                 (dolist (c (node.out node))
+                   (restore-children-links-from-properties c))))))
+    (restore-children-links-from-properties node)))
 
 (defun org-parse-extended (org)
   (let ((doc (org-parse org)))
