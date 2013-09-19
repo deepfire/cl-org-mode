@@ -3,9 +3,11 @@
 ;;;
 ;;; Hashing
 (defparameter *debug-hash* nil)
+(defparameter *debug-hash-hits* nil)
 
-(defmacro with-hash-debug (() &body body)
-  `(let ((*debug-hash* 0))
+(defmacro with-hash-debug ((&key hits) &body body)
+  `(let ((*debug-hash* 0)
+         (*debug-hash-hits* ,hits))
      ,@body))
 
 (defun print-spaces (n)
@@ -106,7 +108,10 @@
 
 (defmethod hash-of :around ((o org-node))
   (let ((cache *hash-cache*))
-    (or (gethash o (slot-value cache 'node->hash))
+    (or (when-let ((cres (gethash o (slot-value cache 'node->hash))))
+          (when *debug-hash-hits*
+            (format t "; hit ~S = ~X~%" o cres))
+          cres)
         (add-to-hash-cache cache o (call-next-method)))))
 
 (defun node (hash)
