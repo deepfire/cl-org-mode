@@ -27,7 +27,7 @@
    (static-properties :reader static-properties-of :initarg :static-properties)))
 
 (define-print-object-method ((o org-node) title out)
-    "~S~:[~; ~:*~D children~]" title (when (plusp (length out))
+    "~S ~:[leaf~;~:*~D children~]" title (when (plusp (length out))
                                        (length out)))
 
 (defmethod properties-of ((o org-node))
