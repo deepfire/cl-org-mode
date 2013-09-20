@@ -19,9 +19,16 @@
 ;;; Methods
 (defvar *present-depth*)
 (defvar *present-depth-increment*)
+(defvar *presented-nodes*)
 
 (defmethod org-present (kind (o string) s)
   (write-string o s))
+
+(defun mark-node-presented (node)
+  (setf (gethash node *presented-nodes*) t))
+
+(defun node-presented-p (node)
+  (gethash node *presented-nodes*))
 
 (defmethod org-present (kind (o org-document) s)
   (with-slots (options title section) o
@@ -37,9 +44,12 @@
     (when-let ((properties (properties-of o)))
       (org-present-properties properties *present-depth* s))
     (org-present kind section s)
-    (dolist (c (node.out o))
-      (let ((*present-depth* (+ *present-depth-increment* *present-depth*)))
-        (org-present kind c s)))))
+    (let ((*presented-nodes* (make-hash-table :test 'eq)))
+      (mark-node-presented o)
+      (dolist (c (node.out o))
+        (let ((*present-depth* (+ *present-depth-increment* *present-depth*)))
+          (unless (node-presented-p c)
+            (org-present kind c s)))))))
 
 (defmethod org-present ((kind (eql :flat)) (o org-document) s)
   (let ((*present-depth* 0)
@@ -52,6 +62,7 @@
     (call-next-method)))
 
 (defmethod org-present (kind (o org-node) s)
+  (mark-node-presented o)
   (with-slots (status priority title tags section) o
     (dotimes (i *present-depth*)
       (write-char #\* s))
@@ -62,7 +73,8 @@
     (org-present :flat section s)
     (dolist (c (node.out o))
       (let ((*present-depth* (+ *present-depth-increment* *present-depth*)))
-        (org-present :flat c s)))))
+        (unless (node-presented-p c)
+          (org-present :flat c s))))))
 
 (defmethod org-present (kind (o org-container) s)
   (dolist (c (children-of o))
