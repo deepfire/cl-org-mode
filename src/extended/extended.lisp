@@ -71,13 +71,8 @@
                    (restore-children-links-from-properties c))))))
     (restore-children-links-from-properties node)))
 
-(defun org-parse-extended (org &key (debug-hash *debug-hash*))
+(defun org-parse-extended (org)
   (let ((doc (org-parse org)))
     (with-hash-cache ()
-      ;; populate the hash cache for every node
-      (with-hash-debug (:enable debug-hash)
-        (hash-of doc)
-        (org-dress-node-extended doc))
-      (clear-hash-cache)
-      (hash-of doc)
+      (org-dress-node-extended doc)
       doc)))
