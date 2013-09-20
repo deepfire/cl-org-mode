@@ -33,6 +33,9 @@
 (defmethod properties-of ((o org-node))
   (static-properties-of o))
 
+(defmethod dynamic-property-p ((o cons))
+  nil)
+
 (defun mapc-nodes-preorder (fn node &aux (seen (make-hash-table :test 'eq)))
   (labels ((rec (node)
              (unless (gethash node seen)

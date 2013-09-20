@@ -4,16 +4,18 @@
 ;;; Properties
 (define-constant +child-property-prefix+ "CL-ORG-MODE-CHILD-" :test 'equal)
 
-(defmethod properties-of ((o org-node))
-  (append
-   (static-properties-of o)
-   (dynamic-properties-of o :children)))
-
 (defmethod dynamic-properties-of ((o org-node) (kind (eql :children)))
   (iter (for i from 0)
         (for c in (node.out o))
         (collect (cons (strconcat* +child-property-prefix+ (write-to-string i :base 10))
                        (write-to-string (hash-of c) :base #x10)))))
+
+(defmethod dynamic-property-p ((o cons))
+  (starts-with-subseq +child-property-prefix+ (car o)))
+
+(defmethod properties-of ((o org-node))
+  (append (remove-if #'dynamic-property-p (static-properties-of o))
+          (dynamic-properties-of o :children)))
 
 (defmethod org-present :around (kind (o org-document) stream)
   (with-hash-cache ()
@@ -49,8 +51,7 @@
                (format t "   pre-node.out   ~S~%" (node.out node))
                (format t "   stat-props     ~S~%" (static-properties-of node)))
              (multiple-value-bind (child-prop-ptrs rest)
-                 (unzip (curry #'starts-with-subseq +child-property-prefix+)
-                        (static-properties-of node) :key #'car)
+                 (unzip #'dynamic-property-p (static-properties-of node))
                (let* ((property-referenced-children (node-property-children node child-prop-ptrs))
                       (statically-unlinked-children (set-difference property-referenced-children (node.out node)))
                       (property-unlinked-children (set-difference (node.out node) property-referenced-children)))

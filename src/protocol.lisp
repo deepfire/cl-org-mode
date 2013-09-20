@@ -17,3 +17,4 @@
 
 (defgeneric properties-of (object))
 (defgeneric dynamic-properties-of (object kind))
+(defgeneric dynamic-property-p (cons))

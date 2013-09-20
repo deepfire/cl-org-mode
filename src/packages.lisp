@@ -27,6 +27,7 @@
    #:tags-of
    #:static-properties-of
    #:dynamic-properties-of
+   #:dynamic-property-p
    #:properties-of
    ;;
    #:org-container
