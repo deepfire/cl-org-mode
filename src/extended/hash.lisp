@@ -5,8 +5,8 @@
 (defparameter *debug-hash* nil)
 (defparameter *debug-hash-hits* nil)
 
-(defmacro with-hash-debug ((&key hits) &body body)
-  `(let ((*debug-hash* 0)
+(defmacro with-hash-debug ((&key (enable t) hits) &body body)
+  `(let ((*debug-hash* (when ,enable 0))
          (*debug-hash-hits* ,hits))
      ,@body))
 
@@ -105,6 +105,9 @@
   (with-slots (node->hash hash->node) cache
     (clrhash hash->node)
     (clrhash node->hash)))
+
+(defun hash-cache-size ()
+  (hash-table-count (slot-value *hash-cache* 'hash->node)))
 
 (defmethod hash-of :around ((o org-node))
   (let ((cache *hash-cache*))

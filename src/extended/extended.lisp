@@ -21,8 +21,8 @@
 
 (defvar *debug-redag* nil)
 
-(defmacro with-redag-debug (() &body body)
-  `(let ((*debug-redag* t))
+(defmacro with-redag-debug ((&key (enable t)) &body body)
+  `(let ((*debug-redag* ,enable))
      ,@body))
 
 ;;;
@@ -40,9 +40,14 @@
                    (let* ((hash (parse-integer value :radix #x10))
                           (child (node hash)))
                      (unless child
-                       (org-object-error "~@<Node ~S: missing child number ~S, hash ~S.~:@>" node i hash))
+                       (org-object-error "~@<Node ~S: missing child number ~S, hash ~X (~D entries in hash cache).~:@>"
+                                         node i hash (hash-cache-size)))
                      (collect child))))
            (restore-children-links-from-properties (node)
+             (when *debug-redag*
+               (format t "~S~%" node)
+               (format t "   pre-node.out   ~S~%" (node.out node))
+               (format t "   stat-props     ~S~%" (static-properties-of node)))
              (multiple-value-bind (child-prop-ptrs rest)
                  (unzip (curry #'starts-with-subseq +child-property-prefix+)
                         (static-properties-of node) :key #'car)
@@ -50,9 +55,6 @@
                       (statically-unlinked-children (set-difference property-referenced-children (node.out node)))
                       (property-unlinked-children (set-difference (node.out node) property-referenced-children)))
                  (when *debug-redag*
-                   (format t "~S~%" node)
-                   (format t "   pre-node.out   ~S~%" (node.out node))
-                   (format t "   stat-props     ~S~%" (static-properties-of node))
                    (format t "   new-stat-prop  ~S~%" rest)
                    (format t "   prop-ref-chi   ~S~%" property-referenced-children)
                    (format t "   prop-only-chi  ~S~%" statically-unlinked-children)
@@ -68,12 +70,13 @@
                    (restore-children-links-from-properties c))))))
     (restore-children-links-from-properties node)))
 
-(defun org-parse-extended (org)
+(defun org-parse-extended (org &key (debug-hash *debug-hash*))
   (let ((doc (org-parse org)))
     (with-hash-cache ()
       ;; populate the hash cache for every node
-      (hash-of doc)
-      (org-dress-node-extended doc)
+      (with-hash-debug (:enable debug-hash)
+        (hash-of doc)
+        (org-dress-node-extended doc))
       (clear-hash-cache)
       (hash-of doc)
       doc)))
