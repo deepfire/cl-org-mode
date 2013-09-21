@@ -8,7 +8,10 @@
 	    ((:file "packages")
 	     (:file "protocol")
              (:file "utils")
+	     (:file "conditions")
 	     (:file "cl-org-mode")
+	     (:file "dress")
+	     (:file "traversal")
 	     (:file "present")
 	     )))
   :serial t
