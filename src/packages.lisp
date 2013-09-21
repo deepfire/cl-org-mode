@@ -45,8 +45,10 @@
    #:children-of
    ;;
    #:mapc-nodes-preorder
+   #:mapc-leaf-nodes
    #:mapc-edges-preorder
    #:do-nodes-preorder
+   #:do-leaf-nodes
    #:do-edges-preorder
    ;;
    #:org-dress
