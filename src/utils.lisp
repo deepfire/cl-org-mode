@@ -1,5 +1,59 @@
 (in-package :cl-org-mode)
 
+;; set
+(defun make-hashset (xs &key (test 'eql))
+  (let ((set (make-hash-table :test test)))
+    (dolist (x xs)
+      (setf (gethash x set) set))
+    set))
+
+(defun copy-hashset (xs)
+  (copy-hash-table xs))
+
+(defun hashset-add (x xs)
+  (setf (gethash x xs) x)
+  xs)
+
+(defun hashset-remove (x xs)
+  (remhash x xs)
+  xs)
+
+(defun in-hashset-p (x xs)
+  (nth-value 1 (gethash x xs)))
+
+(defun hashset-intersectionf (xs ys)
+  (maphash (lambda (k v)
+             (declare (ignore v))
+             (unless (gethash k xs)
+               (hashset-remove k ys)))
+           ys)
+  ys)
+
+(defun hashset-unionf (xs ys)
+  (maphash (lambda (k v)
+             (declare (ignore v))
+             (hashset-add k ys))
+           xs)
+  ys)
+
+(defun hashset-intersection (xs ys)
+  (let ((ret (copy-hash-table ys)))
+    (hashset-intersectionf xs ret)
+    ret))
+
+(defun hashset-union (xs ys)
+  (let ((ret (copy-hash-table ys)))
+    (hashset-unionf xs ret)
+    ret))
+
+(defun hashset-list (xs)
+  (let (ret)
+    (maphash (lambda (k v)
+               (declare (ignore v))
+               (push k ret))
+             xs)
+    ret))
+
 ;; from pergamum
 (defun slot-value* (object slot-name &optional (default :unbound-slot))
   "Return the value of slot named SLOT-NAME in OBJECT, when it is bound;

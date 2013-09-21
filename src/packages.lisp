@@ -5,6 +5,17 @@
    #:node.in
    #:node.out
    ;;
+   #:make-hashset
+   #:copy-hashset
+   #:in-hashset-p
+   #:hashset-add
+   #:hashset-remove
+   #:hashset-intersectionf
+   #:hashset-unionf
+   #:hashset-intersection
+   #:hashset-union
+   #:hashset-list
+   ;;
    #:org-condition
    #:org-error
    #:org-simple-error
