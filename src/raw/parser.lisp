@@ -393,8 +393,12 @@
                        (t
                         (push co-set decided-co-sets)
                         (push o valid)))))
-             (setf valid (set-difference valid conflicted))
-             (values all-opts valid unknown duplicate conflicted))))
+             (setf valid (nset-difference valid (copy-list conflicted)))
+             (values (sort all-opts   #'string<)
+                     (sort valid      #'string<)
+                     (sort unknown    #'string<)
+                     (sort duplicate  #'string<)
+                     (sort conflicted #'string<)))))
     (named-seq*
      (<- mix (opt* (org-section :kind :entry-section)))
      (multiple-value-bind (raw-keywords section-content)
