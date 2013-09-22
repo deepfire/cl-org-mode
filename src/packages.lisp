@@ -1,9 +1,6 @@
-(defpackage :cl-org-mode 
+(defpackage :cl-org-mode-utils
   (:use :common-lisp :alexandria :iterate)
   (:export
-   #:node
-   #:node.in
-   #:node.out
    ;;
    #:make-hashset
    #:copy-hashset
@@ -15,6 +12,23 @@
    #:hashset-intersection
    #:hashset-union
    #:hashset-list
+   ;;
+   #:slot-value*
+   ;;
+   #:define-print-object-method
+   ;;
+   #:report-simple-condition
+   #:define-simple-condition
+   #:define-simple-error
+   #:define-simple-warning
+   ))
+
+(defpackage :cl-org-mode
+  (:use :common-lisp :alexandria :iterate :cl-org-mode-utils)
+  (:export
+   #:node
+   #:node.in
+   #:node.out
    ;;
    #:org-condition
    #:org-error

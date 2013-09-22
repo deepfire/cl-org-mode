@@ -11,8 +11,8 @@
 (define-condition org-object-warning (org-warning)
   ((hash :reader hash-of :initarg :hash)))
 
-(cl-org-mode::define-simple-error   org-object-error)
-(cl-org-mode::define-simple-warning org-object-warning)
+(define-simple-error   org-object-error)
+(define-simple-warning org-object-warning)
 
 (define-condition org-object-relink-error (org-dress-error)
   ())
