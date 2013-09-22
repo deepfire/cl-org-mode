@@ -81,25 +81,43 @@
                  (when property-unlinked-children
                    (org-object-warning "~@<Node ~S: incomplete child properties: following children have no corresponding properties:~{ ~S~}.~:@>"
                                        node property-unlinked-children)))))
+           (ordered-set-add (x hset q)
+             (unless (in-hashset-p x hset)
+               (hashset-add x hset)
+               (enqueue x q)))
+           (ordered-set-add-list (xs hset q)
+             (dolist (x xs)
+               (ordered-set-add x hset q)))
            (restore-children-links-from-properties (root)
              (let* ((seen (make-hashset nil :test 'eq))
                     (progress (make-hash-table :test 'eq))
-                    ;; The frontier stores nodes, whose hashability is unknown, yet reasonably plausible,
-                    ;; i.e. that they have at least one hashed child.
-                    (frontier (lret ((acc (make-queue)))
-                                ;; At this point "leafness" still only means org-physical leafness..
-                                (do-leaf-nodes (n root)
-                                  ;; ..so we need to guard against nodes that are not leaves in the org-property sense:
-                                  (unless (some #'children-property-p (static-properties-of n))
-                                    (hash-of n)
-                                    (hashset-add n seen)
-                                    ;; The initial frontier contains parents of leaf nodes,
-                                    ;; as per above definition.
-                                    (enqueue-list (node.in n) acc))))))
+                    ;; The frontier is an ordered set, storing nodes, whose hashability is unknown,
+                    ;; yet reasonably plausible, in the sense that they are physical leaves, or
+                    ;; have at least one hashed child.
+                    (frontier-set (make-hashset nil :test 'eql))
+                    (frontier (make-queue)))
+               ;; Compute the initial frontier.
+               ;; At this point "leafness" still only means org-physical leafness..
+               (do-leaf-nodes (n root)
+                 (when *debug-redag*
+                   (format t "; physleaf ~S~%" n))
+                 (cond
+                   ;; Physical leaves that are not leaves in the org-property sense belong to the frontier.
+                   ((some #'children-property-p (static-properties-of n))
+                    (ordered-set-add n frontier-set frontier))
+                   (t
+                    ;; Proper leaves send their parents to the frontier:
+                    (hash-of n)
+                    (hashset-add n seen)
+                    ;; The initial frontier contains parents of leaf nodes,
+                    ;; as per above definition.
+                    (ordered-set-add-list (node.in n) frontier-set frontier))))
                ;; Unlinked nodes lead to non-termination here.
-               (iter (for n = (dequeue frontier))
-                     (for i from 0)
+               (iter (for i from 0)
+                     (when *debug-redag*
+                       (format t "step ~D, frontier: ~S~%" i (queue-contents frontier)))
                      (while (not (queue-empty-p frontier)))
+                     (for n = (dequeue frontier))
                      (when (in-hashset-p n seen)
                        (org-object-error "~@<DAG circularity violation: ~S is a member of a loop.~@:>" n))
                      (cond
@@ -107,7 +125,7 @@
                         (fixup-children-links n)
                         (hash-of n)
                         (hashset-add n seen)
-                        (enqueue-list (node.in n) frontier))
+                        (ordered-set-add-list (node.in n) frontier-set frontier))
                        (t
                         ;; Don't perform this check too often (note that the
                         ;; approximation here converges in a cubic manner):
@@ -118,7 +136,7 @@
                                 (org-object-error "~@<DAG restorer stuck with ~D unhashable nodes remaining: ~S.~:@>"
                                                   (length (queue-contents frontier)) (queue-contents frontier))))
                             (setf (gethash n progress) current-progress)))
-                        (enqueue n frontier)))))))
+                        (ordered-set-add n frontier-set frontier)))))))
     (restore-children-links-from-properties root)))
 
 (defun org-parse-extended (org)
