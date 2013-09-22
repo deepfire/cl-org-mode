@@ -26,7 +26,7 @@
 
 (defmethod initialize-instance :after ((o org-node) &key out &allow-other-keys)
   (dolist (child out)
-    (setf (node.in child) o)))
+    (setf (node.in child) (list o))))
 
 (defun make-node (title section children &key status priority tags static-properties
                                            (type 'org-node))
