@@ -64,6 +64,47 @@
     ret))
 
 ;; from pergamum
+(defmacro lret (bindings &body body)
+  "A @macro{let}-construct which returns its last binding."
+  `(let ,bindings ,@body
+        ,(let ((x (car (last bindings))))
+              (if (atom x)
+                  x
+                  (car x)))))
+
+;; from pergamum
+(defun make-queue ()
+  "Make a PAIP queue."
+  (lret ((q (cons nil nil)))
+    (setf (car q) q)))
+
+;; from pergamum
+(defun enqueue (elt q)
+  "En-Norvig-queue."
+  (setf (car q)
+        (setf (cdar q) (cons elt nil))))
+
+(defun enqueue-list (list q)
+  (dolist (elt list)
+    (enqueue elt q)))
+
+;; from pergamum
+(defun dequeue (q)
+  "De-Norvig-queue."
+  (prog1 (pop (cdr q))
+    (if (null (cdr q)) (setf (car q) q))))
+
+;; from pergamum
+(defun queue-contents (q)
+  "The contents of a PAIP-queue."
+  (cdr q))
+
+;; from pergamum
+(defun queue-empty-p (q)
+  "Test the PAIP-queue for emptiness."
+  (null (cdr q)))
+
+;; from pergamum
 (defun slot-value* (object slot-name &optional (default :unbound-slot))
   "Return the value of slot named SLOT-NAME in OBJECT, when it is bound;
 otherwise return DEFAULT, which defaults to :UNBOUND-SLOT."
@@ -105,6 +146,7 @@ PRINT-UNREADABLE-OBJECT, with TYPE and IDENTITY passed to it."
        (defun ,base-type (,@(when object-initarg `(o)) format-control &rest format-arguments)
          (,signaler ',type ,@(when object-initarg `(,object-initarg o)) :format-control format-control :format-arguments format-arguments)))))
 
+;; from pergamum
 (defmacro define-simple-error (base-type &key object-initarg)
   "Define a simple error subclassing from BASE-TYPE and a corresponding
 function, analogous to ERROR, but also optionally taking the object 
@@ -115,6 +157,7 @@ Whether or not the error signaller will require and pass the
 object is specified by OBJECT-INITARG being non-NIL."
   `(define-simple-condition ,base-type :object-initarg ,object-initarg :simple-condition-type simple-error :signaler error))
 
+;; from pergamum
 (defmacro define-simple-warning (base-type &key object-initarg)
   "Define a simple warning subclassing from BASE-TYPE and a corresponding
 function, analogous to WARN, but also optionally taking the object 

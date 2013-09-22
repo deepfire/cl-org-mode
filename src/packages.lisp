@@ -15,6 +15,15 @@
    #:hashset-union
    #:hashset-list
    ;;
+   #:lret
+   ;;
+   #:make-queue
+   #:enqueue
+   #:enqueue-list
+   #:dequeue
+   #:queue-contents
+   #:queue-empty-p
+   ;;
    #:slot-value*
    ;;
    #:define-print-object-method
