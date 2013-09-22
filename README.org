@@ -1,0 +1,37 @@
+## -*- mode: org -*-
+#+STARTUP: hidestars odd
+#+AUTHOR: Samium Gromoff
+#+EMAIL: _deepfire@feelingofgreen.ru
+
+* What is it?
+
+  CL-ORG-MODE is a three-component, layered solution for
+  manipulation of Org-structured text:
+
+  - CL-ORG-MODE-RAW ::
+    provides tolerant parsing of Org-structured text into a semi-detailed AST
+  - CL-ORG-MODE (should we call it CL-ORG-MODE-MIDDLE, to avoid confusion?) ::
+    "dresses" the AST into a fairly rich object tree, and allows serialisation into text
+  - CL-ORG-MODE-EXTENDED ::
+    allows representation of DAGs in Org files, atop a CAS (content-addressed storage)
+
+* Home
+
+  The current home of CL-ORG-MODE is at:
+
+    https://github.com/deepfire/cl-org-mode
+
+* Dependencies
+
+  - CL-ORG-MODE-RAW:      alexandria parser-combinators iterate split-sequence
+  - CL-ORG-MODE:          cl-org-mode-raw cl-containers
+  - CL-ORG-MODE-EXTENDED: cl-org-mode ironclad flexi-streams
+
+* Testing
+
+  #+BEGIN_SRC common-lisp
+  (require :cl-org-mode-tests)
+  (asdf:oos 'asdf:test-op :cl-org-mode)
+  (require :cl-org-mode-extended-tests)
+  (asdf:oos 'asdf:test-op :cl-org-mode-extended)
+  #+END_SRC

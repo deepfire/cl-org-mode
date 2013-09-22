@@ -3,6 +3,11 @@
 #+AUTHOR: Samium Gromoff
 #+EMAIL: _deepfire@feelingofgreen.ru
 
+* What is it?
+
+  CL-ORG-MODE-RAW provides tolerant parsing of Org-structured text
+  into a semi-detailed AST.
+
 * Properties
 
   * rougly follows the in-progress spec at:
