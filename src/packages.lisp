@@ -6,7 +6,9 @@
    #:copy-hashset
    #:in-hashset-p
    #:hashset-add
+   #:hashset-add-list
    #:hashset-remove
+   #:hashset-pop
    #:hashset-intersectionf
    #:hashset-unionf
    #:hashset-intersection

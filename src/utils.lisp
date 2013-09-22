@@ -14,9 +14,18 @@
   (setf (gethash x xs) x)
   xs)
 
+(defun hashset-add-list (list xs)
+  (dolist (x list)
+    (hashset-add x xs)))
+
 (defun hashset-remove (x xs)
   (remhash x xs)
   xs)
+
+(defun hashset-pop (xs)
+  (with-hash-table-iterator (pophash xs)
+    (multiple-value-bind (present x) (pophash)
+      (values x present))))
 
 (defun in-hashset-p (x xs)
   (nth-value 1 (gethash x xs)))
