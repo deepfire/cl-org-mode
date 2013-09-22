@@ -399,32 +399,35 @@
      (<- mix (opt* (org-section :kind :entry-section)))
      (multiple-value-bind (raw-keywords section-content)
          (unzip (lambda (x) (and (consp x) (eq :keyword (car x)))) (rest mix))
-       (let ((keyword-plist (org-keywords-as-plist raw-keywords)))
+       (let* ((keyword-plist (org-keywords-as-plist raw-keywords))
+              (startup-strings (iter (for (k v . nil) on keyword-plist by #'cddr)
+                                     (when (eq k :startup)
+                                       (collect " ")
+                                       (collect v)))))
          (when trace
            (format t ";;; header options:~{ ~S~}~%" keyword-plist)
            (when section-content
              (format t ";;; header section: ~S~%" section-content)))
-         (destructuring-bind (&key (startup "") &allow-other-keys) keyword-plist
-           (multiple-value-bind (all valid unknown duplicate conflicted)
-               (parse-startup startup)
-             (when trace
-               (format t ";;; header startup:~%")
-               (when valid
-                 (format t ";;;    valid:     ~{ ~S~}~%" valid))
-               (when unknown
-                 (format t ";;;    unknown:   ~{ ~S~}~%" unknown))
-               (when duplicate
-                 (format t ";;;    duplicate: ~{ ~S~}~%" duplicate))
-               (when conflicted
-                 (format t ";;;    conflicted:~{ ~S~}~%" conflicted)))
-             `((:header
-                ,@(append (remove-from-plist keyword-plist :startup)
-                          (when valid
-                            (list :startup (keywords-as-flags valid)))
-                          (when (or unknown conflicted)
-                            (list :startup-all (keywords-as-flags all)))))
-               ,(when section-content
-                      (cons :section section-content))))))))))
+         (multiple-value-bind (all valid unknown duplicate conflicted)
+             (parse-startup (strconcat startup-strings))
+           (when trace
+             (format t ";;; header startup:~%")
+             (when valid
+               (format t ";;;    valid:     ~{ ~S~}~%" valid))
+             (when unknown
+               (format t ";;;    unknown:   ~{ ~S~}~%" unknown))
+             (when duplicate
+               (format t ";;;    duplicate: ~{ ~S~}~%" duplicate))
+             (when conflicted
+               (format t ";;;    conflicted:~{ ~S~}~%" conflicted)))
+           `((:header
+              ,@(append (remove-from-plist keyword-plist :startup)
+                        (when valid
+                          (list :startup (keywords-as-flags valid)))
+                        (when (or unknown conflicted)
+                          (list :startup-all (keywords-as-flags all)))))
+             ,(when section-content
+                    (cons :section section-content)))))))))
 
 ;;;
 ;;; Whole thing
