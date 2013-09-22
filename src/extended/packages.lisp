@@ -5,6 +5,13 @@
                 :strconcat :strconcat* :unzip)
   (:export
    ;;
+   #:org-dress-error
+   #:org-object-error
+   #:org-object-simple-error
+   #:org-object-warning
+   #:org-object-simple-warning
+   #:org-object-relink-error
+   ;;
    #:hash-of
    #:with-hash-cache
    #:clear-hash-cache

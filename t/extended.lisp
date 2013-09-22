@@ -3,13 +3,15 @@
         :alexandria
         :iterate
         :cl-org-mode
+        :cl-org-mode-utils
 	:cl-org-mode-extended))
 
 (in-package :cl-org-mode-extended-tests)
 
 (defun roundtrip-hash-stability (org)
   (let* ((initial (read-file-into-string #P"/home/deepfire/src/cl-org-mode/t/example.org"))
-         (first (org-parse-extended initial))
+         (first (with-ignored-warnings (org-object-warning)
+                  (org-parse-extended initial)))
          (first-rt (with-output-to-string (s)
                      (org-present :normal first s)))
          (second (org-parse-extended first-rt))
@@ -22,7 +24,8 @@
 
 (defun roundtrip-text-stability (org)
   (let* ((initial (read-file-into-string #P"/home/deepfire/src/cl-org-mode/t/example.org"))
-         (first (org-parse-extended initial))
+         (first (with-ignored-warnings (org-object-warning)
+                  (org-parse-extended initial)))
          (first-rt (with-output-to-string (s)
                      (org-present :normal first s)))
          (second (org-parse-extended first-rt))
