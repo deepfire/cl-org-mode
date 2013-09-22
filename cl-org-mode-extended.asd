@@ -10,11 +10,12 @@
                       :components
                       ((:file "packages")
                        (:file "conditions")
+                       (:file "utils")
                        (:file "hash")
                        (:file "extended")
                        ))
 	     )))
-  :depends-on (:cl-org-mode :ironclad-text))
+  :depends-on (:cl-org-mode :ironclad :flexi-streams))
 
 (defmethod asdf:perform ((op asdf:test-op)
                          (c (eql (asdf:find-system :cl-org-mode-extended))))

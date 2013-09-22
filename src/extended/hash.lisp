@@ -18,7 +18,7 @@
   (let ((*package* (find-package :common-lisp))
         (*print-base* #x10))
     (ironclad:octets-to-integer
-     (ironclad:with-digesting-text-stream (s :sha256 :external-format :utf-8)
+     (with-digesting-text-stream (s :sha256 :external-format :utf-8)
        (labels ((write-tag-to (stream name &rest xs)
                   (declare (string name))
                   (write-string name stream)
@@ -62,7 +62,7 @@
   (let ((*package* (find-package :common-lisp))
         (*print-base* #x10))
     (ironclad:octets-to-integer
-     (ironclad:with-digesting-text-stream (s :sha256 :external-format :utf-8)
+     (with-digesting-text-stream (s :sha256 :external-format :utf-8)
        (org-present :flat o s)))))
 
 ;;;
