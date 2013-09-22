@@ -28,6 +28,8 @@
    ;;
    #:define-print-object-method
    ;;
+   #:ignore-warning
+   #:with-ignored-warnings
    #:report-simple-condition
    #:define-simple-condition
    #:define-simple-error

@@ -132,6 +132,14 @@ PRINT-UNREADABLE-OBJECT, with TYPE and IDENTITY passed to it."
                  (format ,stream ,format-control ,@format-arguments))
               `(format ,stream ,format-control ,@format-arguments))))))
 
+(defun ignore-warning (condition)
+  (declare (ignore condition))
+  (muffle-warning))
+
+(defmacro with-ignored-warnings ((condition-type) &body body)
+  `(handler-bind ((,condition-type #'ignore-warning))
+     ,@body))
+
 ;; from pergamum
 (defun report-simple-condition (condition stream)
   (apply #'format stream (simple-condition-format-control condition) (simple-condition-format-arguments condition)))
