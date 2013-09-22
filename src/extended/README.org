@@ -1,0 +1,28 @@
+## -*- mode: org -*-
+#+STARTUP: hidestars odd
+#+AUTHOR: Samium Gromoff
+#+EMAIL: _deepfire@feelingofgreen.ru
+
+* What is it?
+
+  CL-ORG-MODE-EXTENDED provides representation of DAGs over enriched Org semantics,
+  implemented over content-addressed storage (CAS).
+
+* Properties
+
+  * backward-compatible: the extended information is stored in node properties
+  * plain (non-extended) Org file import
+  * powerful inter-node reference mechanism: content-addressed storage (CAS)
+  * exactly the same API as CL-ORG-MODE, modulo the parser entry point
+
+* Testing
+
+  It would suffice to just do:
+
+  #+BEGIN_SRC common-lisp
+  (require :cl-org-mode-extended-tests)
+  (asdf:oos 'asdf:test-op :cl-org-mode-extended)
+  #+END_SRC
+
+  The tests perform a plain Org import and two serialisation/reparse roundtrips, checking for
+  stability of (post-import) text and hashes.
