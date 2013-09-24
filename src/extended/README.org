@@ -20,7 +20,6 @@
   It would suffice to just do:
 
   #+BEGIN_SRC common-lisp
-  (require :cl-org-mode-extended-tests)
   (asdf:oos 'asdf:test-op :cl-org-mode-extended)
   #+END_SRC
 
