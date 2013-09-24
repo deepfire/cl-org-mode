@@ -9,7 +9,7 @@
 (in-package :cl-org-mode-extended-tests)
 
 (defun roundtrip-hash-stability (org)
-  (let* ((initial (read-file-into-string #P"/home/deepfire/src/cl-org-mode/t/example.org"))
+  (let* ((initial (read-file-into-string (asdf:system-relative-pathname (asdf:find-system :cl-org-mode) #P"t/example.org")))
          (first (with-ignored-warnings (org-object-warning)
                   (org-parse-extended initial)))
          (first-rt (with-output-to-string (s)
@@ -23,7 +23,7 @@
          (hash-of second)))))
 
 (defun roundtrip-text-stability (org)
-  (let* ((initial (read-file-into-string #P"/home/deepfire/src/cl-org-mode/t/example.org"))
+  (let* ((initial (read-file-into-string (asdf:system-relative-pathname (asdf:find-system :cl-org-mode) #P"t/example.org")))
          (first (with-ignored-warnings (org-object-warning)
                   (org-parse-extended initial)))
          (first-rt (with-output-to-string (s)
