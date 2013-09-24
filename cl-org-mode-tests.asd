@@ -6,8 +6,7 @@
   ((:module :t
 	    :serial t
 	    :components
-            ((:file "rt")
-             (:file "raw")
+            ((:file "raw")
              (:file "middle"))))
   :depends-on (:cl-org-mode-raw :parser-combinators-debug
-               :cl-org-mode))
+               :cl-org-mode :rt))

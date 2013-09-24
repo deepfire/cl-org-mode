@@ -15,9 +15,8 @@
                        (:file "extended")
                        ))
 	     )))
+  :in-order-to ((asdf:test-op (asdf:load-op :cl-org-mode-extended-tests)))
+  :perform (asdf:test-op :after (op c)
+             (or (funcall (intern "DO-TESTS" (find-package "RTEST")))
+                 (error "TEST-OP failed for CL-ORG-MODE-EXTENDED-TESTS")))
   :depends-on (:cl-org-mode :ironclad :flexi-streams))
-
-(defmethod asdf:perform ((op asdf:test-op)
-                         (c (eql (asdf:find-system :cl-org-mode-extended))))
-  (or (funcall (intern "DO-TESTS" (find-package "RTEST")))
-      (error "TEST-OP failed for CL-ORG-MODE-EXTENDED-TESTS")))

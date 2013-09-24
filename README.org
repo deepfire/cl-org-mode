@@ -29,9 +29,9 @@
 
 * Testing
 
+  Tests depend on the rt library.
+
   #+BEGIN_SRC common-lisp
-  (require :cl-org-mode-tests)
   (asdf:oos 'asdf:test-op :cl-org-mode)
-  (require :cl-org-mode-extended-tests)
   (asdf:oos 'asdf:test-op :cl-org-mode-extended)
   #+END_SRC
