@@ -43,7 +43,8 @@
     (format s "#+TITLE: ~A~%" title)
     (when-let ((properties (properties-of o)))
       (org-present-properties properties *present-depth* s))
-    (org-present kind section s)
+    (when section
+      (org-present kind section s))
     (let ((*presented-nodes* (make-hash-table :test 'eq)))
       (mark-node-presented o)
       (dolist (c (node.out o))
@@ -70,7 +71,8 @@
             status priority title tags)
     (when-let ((properties (properties-of o)))
       (org-present-properties properties *present-depth* s))
-    (org-present :flat section s)
+    (when section
+      (org-present :flat section s))
     (dolist (c (node.out o))
       (let ((*present-depth* (+ *present-depth-increment* *present-depth*)))
         (unless (node-presented-p c)

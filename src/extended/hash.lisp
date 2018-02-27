@@ -110,6 +110,11 @@
   (hash-table-count (slot-value *hash-cache* 'hash->node)))
 
 (defmethod hash-of :around ((o org-node))
+  ;; This mechanism will raise exception with conflicted hash.
+  ;; A better mechanism should be provided.
+  #+org-no-hash
+  (call-next-method)
+  #-org-no-hash
   (let ((cache *hash-cache*))
     (or (when-let ((cres (gethash o (slot-value cache 'node->hash))))
           (when *debug-hash-hits*
