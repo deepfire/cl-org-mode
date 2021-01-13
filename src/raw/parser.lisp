@@ -445,9 +445,12 @@
 (defun org-raw-parse-string (string)
   (parse-string* (org-parser) string))
 
-(defun org-raw-parse (x)
-  (etypecase x
+(defun org-raw-parse (org)
+  "Parse the org document. ORG can be a string, a pathname or a stream.
+
+  Example: (org-raw-parse #p\"README.org\")"
+  (etypecase org
     (string
-     (org-raw-parse-string x))
+     (org-raw-parse-string org))
     ((or pathname stream)
-     (org-raw-parse-string (read-file-into-string x)))))
+     (org-raw-parse-string (read-file-into-string org)))))
