@@ -15,6 +15,9 @@
   - CL-ORG-MODE-EXTENDED ::
     allows representation of DAGs in Org files, atop a CAS (content-addressed storage)
 
+  It closely follows the official [[https://orgmode.org/worg/dev/org-syntax.html#Greater_Elements][Org Syntax]] and
+  [[https://orgmode.org/worg/dev/org-element-api.html][Org Element API]].
+
 * Home
 
   The current home of CL-ORG-MODE is at:
@@ -26,6 +29,60 @@
   - CL-ORG-MODE-RAW:      alexandria parser-combinators iterate split-sequence
   - CL-ORG-MODE:          cl-org-mode-raw cl-containers
   - CL-ORG-MODE-EXTENDED: cl-org-mode ironclad flexi-streams
+
+* Usage
+
+Use =(cl-org-mode-raw:org-raw-parse file-or-string)= to get a
+representation of an Org document as a tree of cons cells:
+
+#+BEGIN_SRC text
+CL-USER> (cl-org-mode-raw:org-raw-parse #p"README.org")
+(:ORG
+ (:HEADER :AUTHOR "Samium Gromoff" :EMAIL "_deepfire@feelingofgreen.ru"
+  :STARTUP (:HIDESTARS T :ODD T))
+ (:SECTION "## -*- mode: org -*-
+"
+  "
+")
+ (:ENTRY (:STARS 1 :TITLE "What is it?")
+  (:SECTION "
+  CL-ORG-MODE is a three-component, layered solution for
+  manipulation of Org-structured text:
+
+[etc]
+#+end_src
+
+Use =(cl-org-mode-extended:org-parse-extended #P"README.org")= to get
+a richer representation.
+
+Use =(org-present kind object)=, where =kind= is one of =:flat= or
+=:normal=, to print objects back as plain text.
+
+Finally, use the defined readers to access an object's data:
+
+Node objects define:
+
+#+BEGIN_SRC text
+title
+section
+children
+status
+priority
+tags
+static-properties
+#+end_src
+
+A keyword has:
+
+#+BEGIN_SRC text
+name value optional
+#+end_src
+
+A container has =children-of=.
+
+A block has =parameter-of=.
+
+See them all in =cl-org-mode.lisp=.
 
 * Testing
 
