@@ -30,7 +30,7 @@
           ((:block :dynamic-block)
            (make-instance 'org-block        :name name :children (children-of (org-dress-section contents)) :parameters parameters))
           (:basic-drawer
-           (make-instance 'org-basic-drawer :name name :children (children-of (org-dress-section contents))))
+           (make-instance 'org-drawer :name name :children (children-of (org-dress-section contents))))
           (:property-drawer
            (make-instance 'org-properties              :children (mapcar #'org-dress-property contents)))
           ((:keyword :attribute)
