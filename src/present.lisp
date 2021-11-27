@@ -17,7 +17,7 @@
 
 ;;;
 ;;; Methods
-(defvar *present-depth*)
+(defvar *present-depth* 0)
 (defvar *present-depth-increment*)
 (defvar *presented-nodes*)
 
